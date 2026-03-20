@@ -31,7 +31,7 @@
 
         body {
             font-family: 'FuenteA', 'Courier New', monospace;
-            font-size: {{ $width === 58 ? '10pt' : '11pt' }};
+            font-size: {{ $width === 58 ? '9pt' : '9pt' }};
             margin: 0;
             padding: 1mm 2mm 4mm;
             width: 100%;
@@ -40,7 +40,7 @@
         }
 
         .venta-num {
-            font-size: {{ $width === 58 ? '16pt' : '20pt' }};
+            font-size: {{ $width === 58 ? '14pt' : '16pt' }};
             font-weight: bold;
             text-align: center;
             margin-bottom: 1mm;
@@ -56,14 +56,14 @@
         }
 
         .item-nombre {
-            font-size: {{ $width === 58 ? '13pt' : '16pt' }};
+            font-size: {{ $width === 58 ? '11pt' : '13pt' }};
             font-weight: bold;
             line-height: 1.3;
             flex: 1;
         }
 
         .item-detalle {
-            font-size: {{ $width === 58 ? '13pt' : '16pt' }};
+            font-size: {{ $width === 58 ? '11pt' : '13pt' }};
             font-weight: bold;
             white-space: nowrap;
         }

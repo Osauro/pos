@@ -36,7 +36,7 @@
 
         body {
             font-family: 'FuenteA', 'Courier New', monospace;
-            font-size: {{ $width === 58 ? '11pt' : '12pt' }};
+            font-size: {{ $width === 58 ? '12pt' : '14pt' }};
             margin: 0;
             padding: 0 1mm 5mm;
             width: 100%;
@@ -49,7 +49,7 @@
         .bold    { font-weight: bold; }
 
         .negocio {
-            font-size: {{ $width === 58 ? '13pt' : '15pt' }};
+            font-size: {{ $width === 58 ? '14pt' : '17pt' }};
             font-weight: bold;
             text-align: center;
             letter-spacing: 1px;
@@ -57,7 +57,7 @@
         }
 
         .venta-num {
-            font-size: {{ $width === 58 ? '12pt' : '13pt' }};
+            font-size: {{ $width === 58 ? '13pt' : '15pt' }};
             font-weight: bold;
             text-align: center;
         }
@@ -107,7 +107,7 @@
         .total-row {
             display: flex;
             justify-content: space-between;
-            font-size: {{ $width === 58 ? '13pt' : '14pt' }};
+            font-size: {{ $width === 58 ? '14pt' : '16pt' }};
             font-weight: bold;
             margin: 2mm 0;
         }
