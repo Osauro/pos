@@ -7,9 +7,6 @@
     <style>
         @php
             $pageWidth = $width === 58 ? '58mm' : '80mm';
-            $cols      = $width === 58 ? 28 : 32;
-            $sep       = str_repeat('=', $cols);
-            $dash      = str_repeat('-', $cols);
         @endphp
 
         @media print {
@@ -23,7 +20,7 @@
 
         body {
             font-family: 'Courier New', Courier, monospace;
-            font-size: {{ $width === 58 ? '10pt' : '11pt' }};
+            font-size: {{ $width === 58 ? '11pt' : '12pt' }};
             margin: 0;
             padding: 0 1mm 5mm;
             width: 100%;
@@ -36,7 +33,7 @@
         .bold    { font-weight: bold; }
 
         .negocio {
-            font-size: {{ $width === 58 ? '12pt' : '14pt' }};
+            font-size: {{ $width === 58 ? '13pt' : '15pt' }};
             font-weight: bold;
             text-align: center;
             letter-spacing: 1px;
@@ -44,23 +41,19 @@
         }
 
         .venta-num {
-            font-size: {{ $width === 58 ? '11pt' : '12pt' }};
+            font-size: {{ $width === 58 ? '12pt' : '13pt' }};
             font-weight: bold;
             text-align: center;
         }
 
-        .sep-igual {
-            text-align: center;
+        hr {
+            border: none;
+            border-top: 1px dashed #000;
             margin: 2mm 0;
-            overflow: hidden;
-            white-space: nowrap;
         }
 
-        .sep-dash {
-            text-align: center;
-            margin: 2mm 0;
-            overflow: hidden;
-            white-space: nowrap;
+        hr.solid {
+            border-top-style: solid;
         }
 
         .info-row {
@@ -97,7 +90,7 @@
         .total-row {
             display: flex;
             justify-content: space-between;
-            font-size: {{ $width === 58 ? '12pt' : '13pt' }};
+            font-size: {{ $width === 58 ? '13pt' : '14pt' }};
             font-weight: bold;
             margin: 2mm 0;
         }
@@ -158,7 +151,7 @@
 
     <div class="negocio">{{ strtoupper($negocio) }}</div>
 
-    <div class="sep-igual">{{ $sep }}</div>
+    <hr class="solid">
 
     <div class="venta-num">VENTA: {{ $venta->numero_venta }}</div>
 
@@ -177,9 +170,9 @@
         </div>
     @endif
 
-    <div class="sep-igual">{{ $sep }}</div>
+    <hr class="solid">
     <div class="detalle-titulo">- D E T A L L E -</div>
-    <div class="sep-dash">{{ $dash }}</div>
+    <hr>
 
     @foreach($items as $item)
         <div class="item-row">
@@ -188,14 +181,14 @@
         </div>
     @endforeach
 
-    <div class="sep-igual">{{ $sep }}</div>
+    <hr class="solid">
 
     <div class="total-row">
         <span>TOTAL:</span>
         <span>Bs. {{ number_format($venta->total, 2) }}</span>
     </div>
 
-    <div class="sep-igual">{{ $sep }}</div>
+    <hr class="solid">
 
     <div class="gracias">GRACIAS POR SU COMPRA</div>
 
@@ -212,7 +205,6 @@
     {{-- ══ COMANDA DE COCINA (segunda hoja / corte automático) ══ --}}
     @php
         $comandaItems = $items->filter(fn($i) => $i->producto->tipo !== 'Refrescos')->values();
-        $sepCmd = $width === 58 ? str_repeat('-', 24) : str_repeat('-', 32);
     @endphp
     @if(!($soloTicket ?? false) && $comandaItems->count() > 0)
     <div class="comanda-wrap">
