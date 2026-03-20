@@ -281,12 +281,9 @@
                 document.body.appendChild(overlay);
             });
         } else {
-            // Escritorio: auto-print y cierra tras imprimir
+            // Escritorio: auto-print
             window.addEventListener('load', function () {
                 setTimeout(function () { window.print(); }, 350);
-            });
-            window.addEventListener('afterprint', function () {
-                setTimeout(function () { window.close(); }, 300);
             });
         }
     </script>

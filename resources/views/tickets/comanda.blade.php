@@ -118,9 +118,6 @@
             window.addEventListener('load', function () {
                 setTimeout(function () { window.print(); }, 350);
             });
-            window.addEventListener('afterprint', function () {
-                setTimeout(function () { window.close(); }, 300);
-            });
         }
     </script>
 </body>
