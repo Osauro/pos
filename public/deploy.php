@@ -57,6 +57,9 @@ if ($esNuevo) {
 
     // Generar clave de app
     run("{$artisan} key:generate --force");
+
+    // Crear usuario administrador inicial
+    run("{$artisan} db:seed --class=DatabaseSeeder --force");
 }
 
 // ── 4. Migraciones ────────────────────────────────────────────────────────────
