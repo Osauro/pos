@@ -1,17 +1,20 @@
 <?php
 /**
- * deploy.php — Auto-actualización para pos.misocio.bo
+ * deploy.php — Instalación inicial y auto-actualización para pos.misocio.bo
  *
- * Uso: https://pos.misocio.bo/deploy.php
- * En GitHub: Settings > Webhooks > Payload URL = https://pos.misocio.bo/deploy.php
- *            Content type = application/json   |   Just the push event
+ * Primera vez:    https://pos.misocio.bo/deploy.php
+ * Webhook GitHub: Settings > Webhooks > Payload URL = https://pos.misocio.bo/deploy.php
+ *                 Content type = application/json   |   Just the push event
+ *
+ * Si no existe vendor/ → instalación completa desde cero.
+ * Si ya existe vendor/ → actualización normal.
  */
 
 // ── Configuración ─────────────────────────────────────────────────────────────
 $phpBin      = '/usr/local/bin/php';
-$projectRoot = '/home/misocio405/pos.misocio.bo';   // raíz del proyecto Laravel
+$projectRoot = '/home/misocio405/pos.misocio.bo';
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Helper ────────────────────────────────────────────────────────────────────
 header('Content-Type: text/plain; charset=utf-8');
 
 function run(string $cmd): bool
@@ -28,32 +31,53 @@ function run(string $cmd): bool
     return $code === 0;
 }
 
-// ── Despliegue ────────────────────────────────────────────────────────────────
-echo "=== Despliegue iniciado: " . date('Y-m-d H:i:s') . " ===\n\n";
+$composer = "composer --working-dir={$projectRoot}";
+$artisan  = "{$phpBin} {$projectRoot}/artisan";
+$esNuevo  = !is_dir("{$projectRoot}/vendor");
 
-// 1. Obtener últimos cambios
+echo "=== " . ($esNuevo ? "INSTALACIÓN INICIAL" : "ACTUALIZACIÓN") . ": " . date('Y-m-d H:i:s') . " ===\n\n";
+
+// ── 1. Código actualizado ─────────────────────────────────────────────────────
 run("git -C {$projectRoot} fetch origin");
 run("git -C {$projectRoot} reset --hard origin/master");
 run("git -C {$projectRoot} clean -fd");
 
-// 2. Dependencias PHP (solo producción, sin scripts)
-run("{$phpBin} {$projectRoot}/composer.phar install --no-dev --optimize-autoloader --no-interaction 2>/dev/null || " .
-    "composer install --no-dev --optimize-autoloader --no-interaction --working-dir={$projectRoot}");
+// ── 2. Dependencias Composer ──────────────────────────────────────────────────
+run("{$composer} install --no-dev --optimize-autoloader --no-interaction");
 
-// 3. Migraciones
-run("{$phpBin} {$projectRoot}/artisan migrate --force");
+// ── 3. Solo en instalación inicial ───────────────────────────────────────────
+if ($esNuevo) {
+    echo "--- Configuración inicial ---\n\n";
 
-// 4. Enlace de storage (por si no existe)
-run("{$phpBin} {$projectRoot}/artisan storage:link");
+    // Crear .env si no existe
+    if (!file_exists("{$projectRoot}/.env")) {
+        run("cp {$projectRoot}/.env.example {$projectRoot}/.env");
+        echo "⚠  Recuerda editar .env con los datos de tu base de datos.\n\n";
+    }
 
-// 5. Limpiar y reconstruir cachés
-run("{$phpBin} {$projectRoot}/artisan optimize:clear");
-run("{$phpBin} {$projectRoot}/artisan config:cache");
-run("{$phpBin} {$projectRoot}/artisan route:cache");
-run("{$phpBin} {$projectRoot}/artisan view:cache");
+    // Generar clave de app
+    run("{$artisan} key:generate --force");
+}
 
-// 6. Permisos de storage y bootstrap/cache
+// ── 4. Migraciones ────────────────────────────────────────────────────────────
+run("{$artisan} migrate --force");
+
+// ── 5. Storage link ───────────────────────────────────────────────────────────
+run("{$artisan} storage:link");
+
+// ── 6. Cachés ─────────────────────────────────────────────────────────────────
+run("{$artisan} optimize:clear");
+run("{$artisan} config:cache");
+run("{$artisan} route:cache");
+run("{$artisan} view:cache");
+
+// ── 7. Permisos ───────────────────────────────────────────────────────────────
 run("chmod -R 775 {$projectRoot}/storage");
 run("chmod -R 775 {$projectRoot}/bootstrap/cache");
 
-echo "=== Despliegue completado: " . date('Y-m-d H:i:s') . " ===\n";
+echo "=== " . ($esNuevo ? "Instalación" : "Actualización") . " completada: " . date('Y-m-d H:i:s') . " ===\n";
+if ($esNuevo) {
+    echo "\n⚠  Edita el archivo .env en el servidor con los datos de tu base de datos\n";
+    echo "   y luego vuelve a acceder a https://pos.misocio.bo/deploy.php\n";
+}
+
