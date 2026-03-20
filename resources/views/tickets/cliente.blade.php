@@ -7,7 +7,7 @@
     <style>
         @php
             $pageWidth = $width === 58 ? '58mm' : '80mm';
-            $cols      = $width === 58 ? 32 : 42;
+            $cols      = $width === 58 ? 28 : 32;
             $sep       = str_repeat('=', $cols);
             $dash      = str_repeat('-', $cols);
         @endphp
@@ -23,7 +23,7 @@
 
         body {
             font-family: 'Courier New', Courier, monospace;
-            font-size: {{ $width === 58 ? '8pt' : '9pt' }};
+            font-size: {{ $width === 58 ? '10pt' : '11pt' }};
             margin: 0;
             padding: 0 1mm 5mm;
             width: 100%;
@@ -36,7 +36,7 @@
         .bold    { font-weight: bold; }
 
         .negocio {
-            font-size: {{ $width === 58 ? '11pt' : '13pt' }};
+            font-size: {{ $width === 58 ? '12pt' : '14pt' }};
             font-weight: bold;
             text-align: center;
             letter-spacing: 1px;
@@ -44,7 +44,7 @@
         }
 
         .venta-num {
-            font-size: {{ $width === 58 ? '10pt' : '11pt' }};
+            font-size: {{ $width === 58 ? '11pt' : '12pt' }};
             font-weight: bold;
             text-align: center;
         }
@@ -97,7 +97,7 @@
         .total-row {
             display: flex;
             justify-content: space-between;
-            font-size: {{ $width === 58 ? '11pt' : '12pt' }};
+            font-size: {{ $width === 58 ? '12pt' : '13pt' }};
             font-weight: bold;
             margin: 2mm 0;
         }

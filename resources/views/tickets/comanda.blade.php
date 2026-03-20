@@ -20,7 +20,7 @@
 
         body {
             font-family: 'Courier New', Courier, monospace;
-            font-size: {{ $width === 58 ? '8pt' : '9pt' }};
+            font-size: {{ $width === 58 ? '10pt' : '11pt' }};
             margin: 0;
             padding: 1mm 2mm 4mm;
             width: 100%;
