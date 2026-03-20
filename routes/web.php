@@ -37,8 +37,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/pos', Pos::class)->name('pos');
 
     // Tickets / Comandas (también accesibles en nueva pestaña como fallback)
-    Route::get('/ticket/comanda/{venta}', [TicketController::class, 'comanda'])->name('ticket.comanda');
-    Route::get('/ticket/cliente/{venta}', [TicketController::class, 'cliente'])->name('ticket.cliente');
-    Route::get('/ticket/venta/{venta}',   [TicketController::class, 'venta'])->name('ticket.venta');
+    Route::get('/ticket/comanda/{venta}',     [TicketController::class, 'comanda'])->name('ticket.comanda');
+    Route::get('/ticket/cliente/{venta}',     [TicketController::class, 'cliente'])->name('ticket.cliente');
+    Route::get('/ticket/venta/{venta}',       [TicketController::class, 'venta'])->name('ticket.venta');
+    // Versiones PDF (para impresión en móvil)
+    Route::get('/ticket/cliente/{venta}/pdf', [TicketController::class, 'clientePdf'])->name('ticket.cliente.pdf');
+    Route::get('/ticket/comanda/{venta}/pdf', [TicketController::class, 'comandaPdf'])->name('ticket.comanda.pdf');
 });
 
