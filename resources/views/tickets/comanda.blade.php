@@ -97,14 +97,27 @@
     <script>
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-        window.addEventListener('load', function () {
-            setTimeout(function () {
-                window.print();
-            }, 350);
-        });
-
-        // Solo cerrar automáticamente en escritorio
-        if (!isMobile) {
+        if (isMobile) {
+            document.addEventListener('DOMContentLoaded', function () {
+                var overlay = document.createElement('div');
+                overlay.innerHTML = '<div style="font-size:22px;font-weight:bold;margin-bottom:12px;">🖨️ Toca para imprimir</div><div style="font-size:14px;opacity:.8;">Comanda #{{ $venta->numero_venta }}</div>';
+                overlay.style.cssText = [
+                    'position:fixed','inset:0','z-index:99999',
+                    'background:rgba(41,173,178,.97)',
+                    'color:#fff','display:flex','flex-direction:column',
+                    'align-items:center','justify-content:center',
+                    'cursor:pointer','user-select:none','-webkit-tap-highlight-color:transparent'
+                ].join(';');
+                overlay.addEventListener('click', function () {
+                    overlay.style.display = 'none';
+                    window.print();
+                });
+                document.body.appendChild(overlay);
+            });
+        } else {
+            window.addEventListener('load', function () {
+                setTimeout(function () { window.print(); }, 350);
+            });
             window.addEventListener('afterprint', function () {
                 setTimeout(function () { window.close(); }, 300);
             });

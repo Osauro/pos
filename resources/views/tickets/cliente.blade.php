@@ -25,7 +25,7 @@
 
         body {
             font-family: 'Share Tech Mono', 'Courier New', monospace;
-            font-size: {{ $width === 58 ? '10pt' : '11pt' }};
+            font-size: {{ $width === 58 ? '11pt' : '12pt' }};
             margin: 0;
             padding: 0 1mm 5mm;
             width: 100%;
@@ -38,7 +38,7 @@
         .bold    { font-weight: bold; }
 
         .negocio {
-            font-size: {{ $width === 58 ? '13pt' : '14pt' }};
+            font-size: {{ $width === 58 ? '14pt' : '16pt' }};
             font-weight: bold;
             text-align: center;
             letter-spacing: 2px;
@@ -70,13 +70,13 @@
         .info-row {
             display: flex;
             justify-content: space-between;
-            font-size: 9pt;
+            font-size: 10pt;
             margin-bottom: 0.5mm;
         }
 
         .detalle-titulo {
             text-align: center;
-            font-size: 9pt;
+            font-size: 10pt;
             font-weight: bold;
             letter-spacing: 2px;
             margin: 2mm 0;
@@ -87,7 +87,7 @@
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 1mm;
-            font-size: 9pt;
+            font-size: 10pt;
         }
 
         .item-nombre {
@@ -104,7 +104,7 @@
         .total-row {
             display: flex;
             justify-content: space-between;
-            font-size: {{ $width === 58 ? '13pt' : '14pt' }};
+            font-size: {{ $width === 58 ? '14pt' : '15pt' }};
             font-weight: bold;
             margin: 2mm 0;
         }
@@ -260,14 +260,31 @@
     <script>
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-        window.addEventListener('load', function () {
-            setTimeout(function () {
-                window.print();
-            }, 350);
-        });
-
-        // Solo cerrar automáticamente en escritorio
-        if (!isMobile) {
+        if (isMobile) {
+            // Android Chrome bloquea window.print() automático en popups.
+            // Mostramos overlay de pantalla completa: al tocarlo dispara el print.
+            document.addEventListener('DOMContentLoaded', function () {
+                var overlay = document.createElement('div');
+                overlay.id = 'print-overlay';
+                overlay.innerHTML = '<div style="font-size:22px;font-weight:bold;margin-bottom:12px;">🖨️ Toca para imprimir</div><div style="font-size:14px;opacity:.8;">Ticket #{{ $venta->numero_venta }}</div>';
+                overlay.style.cssText = [
+                    'position:fixed','inset:0','z-index:99999',
+                    'background:rgba(41,173,178,.97)',
+                    'color:#fff','display:flex','flex-direction:column',
+                    'align-items:center','justify-content:center',
+                    'cursor:pointer','user-select:none','-webkit-tap-highlight-color:transparent'
+                ].join(';');
+                overlay.addEventListener('click', function () {
+                    overlay.style.display = 'none';
+                    window.print();
+                });
+                document.body.appendChild(overlay);
+            });
+        } else {
+            // Escritorio: auto-print y cierra tras imprimir
+            window.addEventListener('load', function () {
+                setTimeout(function () { window.print(); }, 350);
+            });
             window.addEventListener('afterprint', function () {
                 setTimeout(function () { window.close(); }, 300);
             });
