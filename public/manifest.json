@@ -1,7 +1,7 @@
 {
-    "name": "TPV — Punto de Venta",
-    "short_name": "TPV",
-    "description": "Sistema de Punto de Venta",
+    "name": "POS — MiSocio",
+    "short_name": "POS",
+    "description": "Sistema POS — MiSocio",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#ffffff",
