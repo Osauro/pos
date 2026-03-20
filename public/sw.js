@@ -23,27 +23,33 @@ self.addEventListener('activate', event => {
     self.clients.claim();
 });
 
-// Estrategia: Network First — siempre intenta la red; si falla, usa caché
+// Estrategia: Network First — solo cachea assets estáticos; las páginas nunca se interceptan
 self.addEventListener('fetch', event => {
     // Solo interceptar requests GET del mismo origen
     if (event.request.method !== 'GET') return;
     if (!event.request.url.startsWith(self.location.origin)) return;
 
-    // Evitar requests de Livewire y rutas dinámicas de la app
     const url = new URL(event.request.url);
-    if (url.pathname.startsWith('/livewire') || url.pathname.startsWith('/sanctum')) return;
+
+    // Solo actuar sobre assets estáticos (CSS, JS, imágenes, fuentes)
+    // Dejar pasar libremente las páginas HTML y rutas de la app
+    if (!isStaticAsset(url.pathname)) return;
 
     event.respondWith(
         fetch(event.request)
             .then(response => {
-                // Cachear solo respuestas exitosas de recursos estáticos
-                if (response.ok && isStaticAsset(url.pathname)) {
+                if (response.ok) {
                     const clone = response.clone();
                     caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
                 }
                 return response;
             })
-            .catch(() => caches.match(event.request))
+            .catch(async () => {
+                const cached = await caches.match(event.request);
+                if (cached) return cached;
+                // Sin caché y sin red: respuesta de error explícita
+                return new Response('Sin conexión', { status: 503, statusText: 'Service Unavailable' });
+            })
     );
 });
 
