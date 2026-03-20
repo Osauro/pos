@@ -10,6 +10,15 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', config('app.name', 'TPV'))</title>
 
+    <!-- PWA -->
+    <link rel="manifest" href="{{ asset('manifest.json') }}" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="TPV" />
+    <meta name="theme-color" content="#884A39" />
+    <link rel="apple-touch-icon" href="{{ asset('assets/images/icon-192.png') }}" />
+
     <!-- Favicon -->
     <link rel="icon" href="{{ asset('assets/images/favicon.png') }}" type="image/x-icon" />
     <link rel="shortcut icon" href="{{ asset('assets/images/favicon.png') }}" type="image/x-icon" />
@@ -284,6 +293,148 @@
     </script>
 
     @stack('scripts')
+
+    <!-- PWA: Banner de instalación -->
+    <div id="pwa-install-banner" style="
+        display: none;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 9999;
+        background: #fff;
+        border-top: 3px solid #884A39;
+        box-shadow: 0 -4px 20px rgba(0,0,0,.15);
+        padding: 14px 16px;
+        align-items: center;
+        gap: 12px;
+        font-family: inherit;
+    ">
+        <img src="{{ asset('assets/images/icon-192.png') }}" alt="TPV"
+             style="width:48px; height:48px; border-radius:10px; flex-shrink:0;" />
+        <div style="flex:1; min-width:0;">
+            <div style="font-weight:700; font-size:15px; color:#333; line-height:1.2;">
+                Instalar TPV
+            </div>
+            <div style="font-size:12px; color:#666; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                Acceso rápido desde tu pantalla de inicio
+            </div>
+        </div>
+        <button id="pwa-btn-install" style="
+            background: #884A39;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            flex-shrink: 0;
+            white-space: nowrap;
+        ">Instalar</button>
+        <button id="pwa-btn-dismiss" style="
+            background: none;
+            border: none;
+            color: #999;
+            font-size: 22px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0 4px;
+            flex-shrink: 0;
+        " title="Cerrar">&times;</button>
+    </div>
+
+    <script>
+        (function () {
+            const STORAGE_KEY = 'pwa_install_decision';
+            // Valores posibles: 'accepted' | 'dismissed'
+            // Si está en 'dismissed', no mostramos el banner a menos que hayan pasado 7 días
+            const DISMISSED_TTL_DAYS = 7;
+
+            let deferredPrompt = null;
+            const banner = document.getElementById('pwa-install-banner');
+            const btnInstall = document.getElementById('pwa-btn-install');
+            const btnDismiss = document.getElementById('pwa-btn-dismiss');
+
+            function shouldShow() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEY);
+                    if (!raw) return true;
+                    const data = JSON.parse(raw);
+                    if (data.decision === 'accepted') return false;
+                    if (data.decision === 'dismissed') {
+                        const daysSince = (Date.now() - data.ts) / (1000 * 60 * 60 * 24);
+                        return daysSince >= DISMISSED_TTL_DAYS;
+                    }
+                } catch (e) { /* ignorar */ }
+                return true;
+            }
+
+            function saveDecision(decision) {
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify({ decision, ts: Date.now() }));
+                } catch (e) { /* ignorar */ }
+            }
+
+            function showBanner() {
+                banner.style.display = 'flex';
+                // En móvil, separar del contenido inferior si la barra ya existe
+                const spacer = document.querySelector('.d-md-none[style*="min-height"]');
+                if (spacer) spacer.style.minHeight = '140px';
+            }
+
+            function hideBanner() {
+                banner.style.display = 'none';
+                const spacer = document.querySelector('.d-md-none[style*="min-height"]');
+                if (spacer) spacer.style.minHeight = '70px';
+            }
+
+            // Registrar Service Worker
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/sw.js').catch(() => {});
+                });
+            }
+
+            // Capturar el evento de instalación del navegador
+            window.addEventListener('beforeinstallprompt', function (e) {
+                e.preventDefault();
+                deferredPrompt = e;
+
+                // Mostrar banner solo si el usuario no tomó una decisión reciente
+                if (shouldShow()) {
+                    showBanner();
+                }
+            });
+
+            // Cuando el usuario instala la PWA por otro medio
+            window.addEventListener('appinstalled', function () {
+                saveDecision('accepted');
+                hideBanner();
+                deferredPrompt = null;
+            });
+
+            // Click en "Instalar"
+            btnInstall.addEventListener('click', async function () {
+                if (!deferredPrompt) return;
+                hideBanner();
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    saveDecision('accepted');
+                } else {
+                    saveDecision('dismissed');
+                }
+                deferredPrompt = null;
+            });
+
+            // Click en "Cerrar / Ahora no"
+            btnDismiss.addEventListener('click', function () {
+                saveDecision('dismissed');
+                hideBanner();
+            });
+        })();
+    </script>
 
     <script>
         // Ocultar loader cuando la página termine de cargar
