@@ -274,8 +274,8 @@
                     'white-space:nowrap'
                 ].join(';');
                 btn.addEventListener('click', function () {
-                    btn.remove();
                     window.print();
+                    btn.style.display = 'none';
                 });
                 document.body.appendChild(btn);
             });
