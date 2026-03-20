@@ -258,12 +258,20 @@
     @endif
 
     <script>
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
         window.addEventListener('load', function () {
             setTimeout(function () {
                 window.print();
-                window.close();
             }, 350);
         });
+
+        // Solo cerrar automáticamente en escritorio, tras finalizar impresión
+        if (!isMobile) {
+            window.addEventListener('afterprint', function () {
+                setTimeout(function () { window.close(); }, 300);
+            });
+        }
     </script>
 </body>
 </html>
