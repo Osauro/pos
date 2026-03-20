@@ -318,15 +318,13 @@
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
         if (isMobile) {
-            // Móvil: abrimos PDFs — se muestran inline en el visor del navegador
-            // 1º → ticket del cliente en PDF
-            window.open(`/ticket/cliente/${ventaId}/pdf`, '_blank');
-            // 2º → comanda de cocina en PDF, tras 10 segundos
+            // Móvil: pestaña completa (sin WIN_OPTS) para que window.print() no sea bloqueado
+            window.open(`/ticket/cliente/${ventaId}?nocomanda=1`, '_blank');
             setTimeout(() => {
-                window.open(`/ticket/comanda/${ventaId}/pdf`, '_blank');
+                window.open(`/ticket/comanda/${ventaId}`, '_blank');
             }, 10000);
         } else {
-            // Escritorio: ventana HTML única con corte de página entre ticket y comanda
+            // Escritorio: ventana pequeña estilo impresora
             window.open(`/ticket/cliente/${ventaId}`, '_blank', WIN_OPTS);
         }
     });

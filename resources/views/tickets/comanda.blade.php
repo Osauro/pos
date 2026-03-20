@@ -95,30 +95,38 @@
     @endforelse
 
     <script>
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-        if (isMobile) {
+        (function () {
+            // Botón de impresión siempre visible como respaldo
             document.addEventListener('DOMContentLoaded', function () {
-                var overlay = document.createElement('div');
-                overlay.innerHTML = '<div style="font-size:22px;font-weight:bold;margin-bottom:12px;">🖨️ Toca para imprimir</div><div style="font-size:14px;opacity:.8;">Comanda #{{ $venta->numero_venta }}</div>';
-                overlay.style.cssText = [
-                    'position:fixed','inset:0','z-index:99999',
-                    'background:rgba(41,173,178,.97)',
-                    'color:#fff','display:flex','flex-direction:column',
-                    'align-items:center','justify-content:center',
-                    'cursor:pointer','user-select:none','-webkit-tap-highlight-color:transparent'
+                var btn = document.createElement('button');
+                btn.textContent = '🖨️ Imprimir';
+                btn.style.cssText = [
+                    'position:fixed','bottom:16px','right:16px','z-index:9999',
+                    'padding:12px 24px','background:#29adb2','color:#fff',
+                    'border:none','border-radius:8px','font-size:16px',
+                    'font-weight:bold','cursor:pointer',
+                    'box-shadow:0 2px 8px rgba(0,0,0,.35)'
                 ].join(';');
-                overlay.addEventListener('click', function () {
-                    overlay.style.display = 'none';
-                    window.print();
-                });
-                document.body.appendChild(overlay);
+                btn.addEventListener('click', function () { window.print(); });
+                window.addEventListener('beforeprint', function () { btn.style.display = 'none'; });
+                window.addEventListener('afterprint',  function () { btn.style.display = ''; });
+                document.body.appendChild(btn);
             });
-        } else {
-            window.addEventListener('load', function () {
-                setTimeout(function () { window.print(); }, 350);
-            });
-        }
+
+            // Auto-print: espera a que las fuentes estén cargadas
+            var printed = false;
+            function doPrint() {
+                if (printed) return;
+                printed = true;
+                window.print();
+            }
+
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(function () { setTimeout(doPrint, 400); });
+            } else {
+                window.addEventListener('load', function () { setTimeout(doPrint, 600); });
+            }
+        })();
     </script>
 </body>
 </html>
