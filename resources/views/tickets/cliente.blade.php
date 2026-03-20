@@ -76,6 +76,7 @@
             display: flex;
             justify-content: space-between;
             font-family: 'FuenteB', 'Courier New', monospace;
+            font-size: {{ $width === 58 ? '9pt' : '10pt' }};
             margin-bottom: 0.5mm;
         }
 
@@ -158,6 +159,8 @@
         }
 
         .encargado {
+            font-family: 'FuenteB', 'Courier New', monospace;
+            font-size: {{ $width === 58 ? '8pt' : '9pt' }};
             text-align: center;
             margin-top: 1mm;
             line-height: 1.6;
