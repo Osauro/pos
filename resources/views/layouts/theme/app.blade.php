@@ -16,7 +16,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="TPV" />
-    <meta name="theme-color" content="#884A39" />
+    <meta name="theme-color" content="#29adb2" />
     <link rel="apple-touch-icon" href="{{ asset('assets/images/icon-192.png') }}" />
 
     <!-- Favicon -->
@@ -46,8 +46,8 @@
     <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}" />
 
     @php
-        $themeNumber = 5;
-        $themeColor = '#884A39';
+        $themeNumber = 3;
+        $themeColor = '#29adb2';
     @endphp
 
     <link id="color" rel="stylesheet" href="{{ asset('assets/css/color-' . $themeNumber . '.css') }}?v={{ time() }}" media="screen" />
@@ -197,9 +197,9 @@
         }
 
         $(document).ready(function () {
-            localStorage.setItem("color", 'color-5');
-            localStorage.setItem("primary", '#884A39');
-            localStorage.setItem("secondary", '#C38154');
+            localStorage.setItem("color", 'color-3');
+            localStorage.setItem("primary", '#29adb2');
+            localStorage.setItem("secondary", '#29adb2');
         });
 
         // Restringir fechas futuras en todos los inputs de tipo date - GLOBAL
@@ -303,7 +303,7 @@
         right: 0;
         z-index: 9999;
         background: #fff;
-        border-top: 3px solid #884A39;
+        border-top: 3px solid #29adb2;
         box-shadow: 0 -4px 20px rgba(0,0,0,.15);
         padding: 14px 16px;
         align-items: center;
@@ -321,7 +321,7 @@
             </div>
         </div>
         <button id="pwa-btn-install" style="
-            background: #884A39;
+            background: #29adb2;
             color: #fff;
             border: none;
             border-radius: 8px;
