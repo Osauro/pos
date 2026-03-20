@@ -1,48 +1,68 @@
 <?php
+/**
+ * deploy.php — Auto-actualización para pos.misocio.bo
+ *
+ * Uso:  https://pos.misocio.bo/deploy.php?token=TU_TOKEN_SECRETO
+ *
+ * En GitHub: Settings > Webhooks > Payload URL = https://pos.misocio.bo/deploy.php?token=TU_TOKEN_SECRETO
+ *            Content type = application/json   |   Just the push event
+ */
 
+// ── Seguridad: token en query string ─────────────────────────────────────────
+define('DEPLOY_TOKEN', 'CAMBIA_ESTE_TOKEN');   // <-- cambia esto
+
+if (($_GET['token'] ?? '') !== DEPLOY_TOKEN) {
+    http_response_code(403);
+    exit("Acceso denegado.\n");
+}
+
+// ── Configuración ─────────────────────────────────────────────────────────────
+$phpBin      = '/usr/local/bin/php';
+$projectRoot = '/home/misocio405/pos.misocio.bo';   // raíz del proyecto Laravel
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 header('Content-Type: text/plain; charset=utf-8');
 
-$phpBin      = '/usr/local/bin/php';
-$projectRoot = '/home/misocio405/MiSocio';
-$publicHtml  = '/home/misocio405/public_html';
-
-function run(string $cmd): void
+function run(string $cmd): bool
 {
     echo "$ {$cmd}\n";
     $output = [];
     $code   = 0;
     exec($cmd . ' 2>&1', $output, $code);
     echo (implode("\n", $output) ?: '(sin salida)') . "\n";
-    if ($code !== 0) echo "[ERROR] Código de salida: {$code}\n";
+    if ($code !== 0) {
+        echo "[ERROR] Código de salida: {$code}\n";
+    }
     echo "\n";
+    return $code === 0;
 }
 
-echo "=== Despliegue: " . date('Y-m-d H:i:s') . " ===\n\n";
+// ── Despliegue ────────────────────────────────────────────────────────────────
+echo "=== Despliegue iniciado: " . date('Y-m-d H:i:s') . " ===\n\n";
 
+// 1. Obtener últimos cambios
 run("git -C {$projectRoot} fetch origin");
 run("git -C {$projectRoot} reset --hard origin/master");
-run("git -C {$projectRoot} clean -fd"); // eliminar archivos no rastreados
-run("/usr/bin/uapi VersionControlDeployment create repository_root='{$projectRoot}'");
+run("git -C {$projectRoot} clean -fd");
+
+// 2. Dependencias PHP (solo producción, sin scripts)
+run("{$phpBin} {$projectRoot}/composer.phar install --no-dev --optimize-autoloader --no-interaction 2>/dev/null || " .
+    "composer install --no-dev --optimize-autoloader --no-interaction --working-dir={$projectRoot}");
+
+// 3. Migraciones
 run("{$phpBin} {$projectRoot}/artisan migrate --force");
-run("{$phpBin} {$projectRoot}/artisan optimize:clear"); // limpia config, route, view, event, cache todo
+
+// 4. Enlace de storage (por si no existe)
+run("{$phpBin} {$projectRoot}/artisan storage:link");
+
+// 5. Limpiar y reconstruir cachés
+run("{$phpBin} {$projectRoot}/artisan optimize:clear");
 run("{$phpBin} {$projectRoot}/artisan config:cache");
 run("{$phpBin} {$projectRoot}/artisan route:cache");
+run("{$phpBin} {$projectRoot}/artisan view:cache");
 
-// Verificar encoding en vistas del servidor
-echo "=== Verificación de encoding ===\n";
-$check = shell_exec("grep -rl $'\\xc3\\x83\\|\\xc3\\x82' {$projectRoot}/resources/views/ 2>/dev/null");
-echo $check ? "ARCHIVOS ROTOS:\n{$check}" : "Encoding OK en todas las vistas\n";
-echo "\n";
+// 6. Permisos de storage y bootstrap/cache
+run("chmod -R 775 {$projectRoot}/storage");
+run("chmod -R 775 {$projectRoot}/bootstrap/cache");
 
-// Eliminar symlink si existe y crear directorio real en public_html/storage
-run("rm -f {$publicHtml}/storage");
-run("mkdir -p {$publicHtml}/storage");
-run("chmod -R 775 {$publicHtml}/storage");
-
-// Mover imágenes existentes de storage/app/public a public_html/storage (si las hay)
-run("rsync -a {$projectRoot}/storage/app/public/ {$publicHtml}/storage/");
-
-// Copiar .htaccess a public_html (contiene SymLinksIfOwnerMatch)
-run("cp {$projectRoot}/public/.htaccess {$publicHtml}/.htaccess");
-
-echo "=== Finalizado: " . date('Y-m-d H:i:s') . " ===\n";
+echo "=== Despliegue completado: " . date('Y-m-d H:i:s') . " ===\n";
