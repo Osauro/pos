@@ -1,0 +1,1680 @@
+/* ========================================
+   ESTILOS PERSONALIZADOS DEL PROYECTO
+   ======================================== */
+
+/* Fondo blanco para todos los contenedores */
+body,
+.page-wrapper,
+.page-body-wrapper,
+.page-body,
+.container-fluid {
+    background-color: #fff !important;
+}
+
+/* Productos - Cards */
+.producto-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border-radius: 0 !important;
+}
+
+.producto-card:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Quitar bordes redondeados de cards y contenedores */
+.card {
+    border-radius: 0 !important;
+}
+
+.card-header {
+    border-radius: 0 !important;
+}
+
+.card-body {
+    border-radius: 0 !important;
+}
+
+/* Botones con efecto zoom */
+.btn-zoom {
+    transition: transform 0.2s ease-in-out;
+}
+
+.btn-zoom:hover {
+    transform: scale(1.3);
+}
+
+/* Paginación - Eliminar puntos de lista */
+.pagination {
+    list-style: none;
+    padding-left: 0;
+}
+
+.pagination li {
+    list-style: none;
+}
+
+/* Paginación - Usar colores del theme */
+.page-item.active .page-link {
+    color: #fff !important;
+    background-color: var(--theme-default) !important;
+    border-color: var(--theme-default) !important;
+}
+
+.active>.page-link,
+.page-link.active {
+    background-color: var(--theme-default) !important;
+    border-color: var(--theme-default) !important;
+}
+
+.page-link {
+    color: var(--theme-default) !important;
+}
+
+.page-link:hover {
+    background-color: var(--theme-default) !important;
+    border-color: var(--theme-default) !important;
+    color: #fff !important;
+    opacity: 0.8;
+}
+
+/* Badges de precios - Responsive */
+.badge-precio {
+    font-size: 0.9rem;
+}
+
+@media (max-width: 576px) {
+    .badge-precio {
+        font-size: 0.7rem;
+        padding: 0.25em 0.4em;
+    }
+}
+
+/* Header - Quitar viñetas del ul */
+.header-right {
+    list-style: none !important;
+    padding-left: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+/* Botones de tipo de producto - Texto blanco en hover y seleccionado */
+.tipo-btn:hover {
+    color: #fff !important;
+}
+
+.btn-check:checked+.tipo-btn {
+    color: #fff !important;
+}
+
+.header-right li {
+    list-style: none !important;
+}
+
+.profile-body {
+    list-style: none !important;
+    padding-left: 0 !important;
+}
+
+/* Perfil de usuario - Siempre visible en móviles */
+.profile-nav {
+    display: block !important;
+}
+
+.profile-nav .user-wrap {
+    display: flex !important;
+    align-items: center !important;
+}
+
+@media (max-width: 575.98px) {
+
+    .profile-nav .user-content h6,
+    .profile-nav .user-content p {
+        font-size: 0.85rem !important;
+    }
+
+    .profile-nav .user-img img {
+        width: 35px !important;
+        height: 35px !important;
+    }
+}
+
+/* Logo - Quitar borde/línea blanca */
+.logo-wrapper {
+    border-right: none !important;
+}
+
+/* Header completo con color del tema */
+.page-header {
+    background-color: var(--theme-default) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.page-header .logo-wrapper {
+    background-color: transparent !important;
+    width: auto !important;
+    /* Permitir que se ajuste al contenido */
+    padding: 15px 16px !important;
+    /* Mantener padding original */
+}
+
+/* Asegurar que el logo mantenga su tamaño */
+.page-header .logo-wrapper a img {
+    height: 60px !important;
+}
+
+.page-header .page-main-header {
+    background-color: transparent !important;
+}
+
+/* Botón toggle sidebar - Mantener tamaño original */
+.toggle-sidebar {
+    margin-left: 15px !important;
+    margin-right: 15px !important;
+    height: 40px !important;
+    width: 40px !important;
+    background-color: hsla(20, 20%, 97%, 0.239) !important;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toggle-sidebar i {
+    color: #fff !important;
+    font-size: 18px !important;
+}
+
+.toggle-sidebar:hover {
+    background-color: hsla(20, 20%, 97%, 0.4) !important;
+}
+
+.toggle-sidebar:hover i {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Avatar de usuario en el header */
+.page-header .profile-nav .user-img {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.page-header .profile-nav .user-img img {
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    transition: border-color 0.2s ease;
+}
+
+.page-header .profile-nav .user-img:hover img {
+    border-color: rgba(255, 255, 255, 0.8);
+}
+
+/* ========================================
+   FORMULARIO PRODUCTOS - ESTILOS DINÁMICOS
+   ======================================== */
+
+/* Botones toggle de tipo de producto */
+.btn-check:checked+.btn-outline-primary {
+    background-color: var(--theme-default) !important;
+    border-color: var(--theme-default) !important;
+    color: #fff !important;
+    box-shadow: 0 4px 12px rgba(115, 102, 255, 0.4);
+    transform: translateY(-2px);
+}
+
+.btn-group .btn-outline-primary {
+    transition: all 0.3s ease;
+    font-weight: 500;
+    padding: 0.6rem 1.2rem;
+}
+
+.btn-group .btn-outline-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(115, 102, 255, 0.2);
+}
+
+/* Switch de estado más grande y vistoso */
+.form-check-input[role="switch"] {
+    width: 3.5rem !important;
+    height: 1.8rem !important;
+    cursor: pointer;
+}
+
+.form-check-input[role="switch"]:checked {
+    background-color: #28a745 !important;
+    border-color: #28a745 !important;
+    box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25);
+}
+
+.form-check-input[role="switch"]:not(:checked) {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+}
+
+/* Animación suave en carga de imagen */
+.img-thumbnail {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.img-thumbnail:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Imagen clickeable con efecto hover */
+.hover-zoom {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.hover-zoom:hover {
+    transform: scale(1.05) !important;
+    box-shadow: 0 8px 20px rgba(115, 102, 255, 0.3) !important;
+}
+
+/* Placeholder de imagen con efecto hover */
+.hover-image-placeholder {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.hover-image-placeholder:hover {
+    background-color: #f8f9fa !important;
+    border-color: var(--theme-default) !important;
+    transform: scale(1.02);
+}
+
+.hover-image-placeholder:hover i {
+    color: var(--theme-default) !important;
+}
+
+/* Badge de cámara en imagen */
+.badge.bg-primary {
+    transition: all 0.3s ease;
+}
+
+.hover-zoom:hover+.position-absolute .badge,
+.position-relative:hover .badge {
+    transform: scale(1.2);
+}
+
+/* Modal más elegante */
+.modal-content {
+    border-radius: 12px !important;
+    overflow: hidden;
+}
+
+.modal-header.bg-primary {
+    background: linear-gradient(135deg, var(--theme-default) 0%, #5d4eff 100%) !important;
+}
+
+/* Animación de entrada del formulario */
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal.show .modal-dialog {
+    animation: slideInDown 0.3s ease-out;
+}
+
+/* Sidebar - Botón de cerrar sesión fijo en la parte inferior */
+.page-sidebar {
+    display: flex;
+    flex-direction: column;
+    margin-top: 0 !important;
+    top: 90px !important;
+    /* Escritorio */
+}
+
+@media (max-width: 991.98px) {
+    .page-sidebar {
+        top: 70px !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .page-sidebar {
+        top: 70px !important;
+    }
+}
+
+@media (max-width: 680px) {
+    .page-sidebar {
+        top: 70px !important;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .page-sidebar {
+        top: 70px !important;
+    }
+}
+
+.page-sidebar .main-sidebar {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Sidebar de perfil de usuario - Derecha */
+.profile-sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9998;
+    /* Por encima de todo, incluido el header */
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.profile-sidebar {
+    position: fixed;
+    top: 0;
+    /* Comienza desde la parte superior, por encima del header */
+    right: -400px;
+    width: 400px;
+    height: 100vh;
+    /* Ocupa toda la altura de la ventana */
+    background-color: #fff;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+    z-index: 9999;
+    /* Por encima de todo, incluido el header */
+    display: flex;
+    flex-direction: column;
+    transition: right 0.3s ease;
+}
+
+.profile-sidebar.active {
+    right: 0;
+}
+
+/* Header del sidebar de perfil */
+.profile-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    background-color: var(--theme-default);
+    color: #fff;
+}
+
+.profile-sidebar-header h5 {
+    color: #fff !important;
+}
+
+.btn-close-sidebar {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 5px;
+    transition: opacity 0.2s;
+}
+
+.btn-close-sidebar:hover {
+    opacity: 0.7;
+}
+
+.btn-logout {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 5px 8px;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-logout:hover {
+    color: #ff4444;
+    transform: scale(1.1);
+}
+
+/* Cuerpo del sidebar de perfil */
+.profile-sidebar-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+}
+
+.profile-avatar-section {
+    padding: 20px 0;
+}
+
+.profile-avatar-large {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 4px solid var(--theme-default);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.profile-avatar-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.profile-avatar-large:hover .avatar-overlay {
+    opacity: 1;
+}
+
+.avatar-overlay i {
+    color: #fff;
+    font-size: 24px;
+}
+
+.profile-form .form-label {
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.profile-info .info-item label {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Footer del sidebar de perfil */
+.profile-sidebar-footer {
+    padding: 20px 24px;
+    border-top: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+}
+
+.profile-sidebar-footer .btn-danger {
+    background-color: #dc2626;
+    border-color: #dc2626;
+    font-weight: 600;
+}
+
+.profile-sidebar-footer .btn-danger:hover {
+    background-color: #991b1b;
+    border-color: #991b1b;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .profile-sidebar {
+        width: 100%;
+        right: -100%;
+        top: 0;
+        /* Por encima del header también en móvil */
+        height: 100vh;
+    }
+}
+
+/* Loading overlay para subida de imágenes */
+.loading-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background-color: rgba(0, 0, 0, 0.7) !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 9999 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.loading-overlay:not([style*="display: none"]) {
+    display: flex !important;
+}
+
+.spinner-container {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+}
+
+.spinner-container p {
+    margin-top: 1rem !important;
+    font-size: 1.1rem !important;
+    color: white !important;
+}
+
+@media (max-width: 767.98px) {
+    .toggle-sidebar {
+        margin-left: 10px !important;
+        margin-right: 10px !important;
+    }
+}
+
+/* Footer fijo */
+.fixed-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background-color: #fff;
+    border-top: 1px solid #dee2e6;
+}
+
+/* Quitar padding horizontal del template — Bootstrap containers manejan su propio espacio */
+.page-body {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-bottom: 50px;
+}
+
+/* Botón tap-top (subir arriba) - Ajustar posición */
+.tap-top {
+    bottom: 90px !important;
+    right: 10px !important;
+}
+
+/* Input de búsqueda - Responsive */
+@media (min-width: 768px) {
+    .header-top .nav-item {
+        max-width: 400px !important;
+    }
+}
+
+@media (max-width: 767px) {
+    .header-top .nav-item {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+
+/* Empty state - Sin productos */
+.empty-state {
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Menú desplegable del usuario - Diseño limpio y profesional */
+.profile-nav .custom-menu {
+    background: #fff !important;
+    border: 1px solid #e5e7eb !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+    border-radius: 8px !important;
+    min-width: 220px !important;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    z-index: 1000;
+}
+
+.profile-nav .custom-menu .profile-body {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Header con info del usuario */
+.profile-nav .custom-menu .user-info-header {
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.profile-nav .custom-menu .user-info-header h6 {
+    color: #111827 !important;
+    font-size: 0.9rem !important;
+    margin: 0;
+}
+
+.profile-nav .custom-menu .user-info-header small {
+    color: #6b7280 !important;
+}
+
+/* Divisor */
+.profile-nav .custom-menu .menu-divider {
+    height: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+    list-style: none !important;
+    border: none !important;
+}
+
+/* Items del menú */
+.profile-nav .custom-menu .menu-item {
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    transition: background-color 0.15s ease;
+}
+
+.profile-nav .custom-menu .menu-item:hover {
+    background: #f3f4f6;
+}
+
+.profile-nav .custom-menu .menu-item a {
+    color: #374151 !important;
+    text-decoration: none !important;
+    font-size: 0.875rem;
+    transition: all 0.15s ease;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.profile-nav .custom-menu .menu-item a i {
+    font-size: 0.95rem;
+    color: #6b7280;
+    transition: color 0.15s ease;
+}
+
+.profile-nav .custom-menu .menu-item:hover a i {
+    color: var(--theme-default);
+}
+
+/* Cursor pointer para el icono de usuario */
+.profile-nav .user-wrap {
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.profile-nav .user-wrap:hover {
+    opacity: 0.8;
+}
+
+/* ========================================
+   CARD HEADERS - Z-INDEX GLOBAL
+   ======================================== */
+.card-header {
+    position: relative;
+    z-index: 100 !important;
+    background-color: white;
+}
+
+/* ========================================
+   AVATAR GROUP - PRODUCTOS EN COMPRAS/VENTAS
+   ======================================== */
+.avatar-group {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 25px;
+}
+
+.avatar-group .avatar {
+    position: relative;
+    display: inline-block;
+    margin-left: -10px;
+    transition: transform 0.3s ease, z-index 0s;
+    z-index: 1;
+}
+
+.avatar-group .avatar:first-child {
+    margin-left: 0;
+}
+
+.avatar-group .avatar:hover {
+    transform: scale(1.5);
+    z-index: 10;
+}
+
+.avatar-group .avatar img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    object-fit: cover;
+    transition: box-shadow 0.3s ease;
+}
+
+.avatar-group .avatar:hover img {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.avatar-group .avatar .quantity-badge {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100%);
+    background: var(--theme-default, #7366ff);
+    color: white;
+    border-radius: 12px;
+    padding: 3px 8px;
+    font-size: 9px;
+    font-weight: 700;
+    white-space: nowrap;
+    min-width: 35px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    line-height: 1.2;
+}
+
+/* Padding especial para cards de compras */
+.compra-card-body {
+    padding-top: 0.6rem !important;
+    padding-bottom: 0.6rem !important;
+}
+
+/* ========================================
+   PAGINACIÓN MÓVIL - MOSTRAR SOLO 4 PÁGINAS
+   ======================================== */
+@media (max-width: 575.98px) {
+
+    /* Ocultar páginas intermedias en móviles, mostrar solo primera, segunda, tercera y última */
+    .pagination .page-item:not(:first-child):not(:nth-child(2)):not(:nth-child(3)):not(:nth-child(4)):not(:last-child):not(.active) {
+        display: none !important;
+    }
+
+    /* Mostrar siempre la página activa */
+    .pagination .page-item.active {
+        display: inline-block !important;
+    }
+}
+
+/* ================================================
+   OPTIMIZACIÓN MÓVIL - BOTTOM NAVIGATION BAR
+   ================================================ */
+
+/* Bottom Navigation Bar */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1050;
+    background: #fff;
+    border-top: 1px solid #e5e7eb;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
+    display: flex;
+    align-items: stretch;
+    height: 62px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    text-decoration: none;
+    color: #9ca3af;
+    font-size: 0.55rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition: all 0.2s ease;
+    padding: 5px 1px;
+    position: relative;
+}
+
+.bottom-nav-item i {
+    font-size: 1.1rem;
+    transition: all 0.2s ease;
+}
+
+.bottom-nav-item.active {
+    color: var(--theme-default);
+}
+
+.bottom-nav-item.active i {
+    transform: translateY(-2px);
+}
+
+.bottom-nav-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30px;
+    height: 3px;
+    background: var(--theme-default);
+    border-radius: 3px 3px 0 0;
+}
+
+/* Espaciado del contenido para que no quede debajo del bottom nav */
+@media (max-width: 767.98px) {
+    .page-body {
+        padding-bottom: 80px !important;
+    }
+
+    .tap-top {
+        bottom: 80px !important;
+    }
+}
+
+/* ================================================
+   OPTIMIZACIÓN MÓVIL - HEADER (oculto en móvil)
+   ================================================ */
+
+@media (max-width: 767.98px) {
+
+    /* El header está oculto en móvil con d-none d-md-flex */
+    /* Anular el margin-top que el template añade por el header fijo */
+    .page-body-wrapper {
+        margin-top: 0 !important;
+    }
+
+    .page-body {
+        margin-top: 0 !important;
+    }
+}
+
+/* ================================================
+   OPTIMIZACIÓN MÓVIL - SIDEBAR (DRAWER DESLIZABLE)
+   ================================================ */
+
+@media (max-width: 767.98px) {
+
+    /* Sidebar oculto fuera de pantalla por defecto */
+    .page-sidebar {
+        display: flex !important;
+        flex-direction: column;
+        position: fixed !important;
+        top: 0 !important;
+        left: -280px !important;
+        width: 265px !important;
+        height: 100dvh !important;
+        z-index: 1200 !important;
+        transition: left 0.3s ease !important;
+        box-shadow: 4px 0 16px rgba(0, 0, 0, 0.25);
+        overflow-y: auto;
+    }
+
+    /* Cuando sidebar está abierto (page-wrapper SIN .sidebar-open) */
+    .page-wrapper:not(.sidebar-open) .page-sidebar {
+        left: 0 !important;
+    }
+
+    /* Backdrop oscuro detrás del drawer */
+    .sidebar-mobile-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1199;
+        cursor: pointer;
+    }
+
+    .sidebar-mobile-backdrop.active {
+        display: block;
+    }
+
+    .page-body-wrapper {
+        margin-left: 0 !important;
+    }
+
+    .page-body {
+        margin-left: 0 !important;
+    }
+}
+
+/* ================================================
+   OPTIMIZACIÓN MÓVIL - MODALES (BOTTOM SHEET)
+   ================================================ */
+
+@media (max-width: 767.98px) {
+    .modal-dialog {
+        margin: 0 !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        max-height: 95vh;
+    }
+
+    .modal-content {
+        border-radius: 20px 20px 0 0 !important;
+        max-height: 95vh;
+        overflow-y: auto;
+    }
+
+    .modal.show .modal-dialog {
+        animation: slideUpModal 0.3s ease-out !important;
+    }
+
+    .modal-footer {
+        padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+        position: sticky;
+        bottom: 0;
+        background: #fff;
+        z-index: 1;
+    }
+
+    /* Modales con imagen (productos) */
+    .modal-lg .modal-body .row {
+        flex-direction: column;
+    }
+
+    .modal-lg .col-md-4,
+    .modal-lg .col-md-8 {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .modal-lg .col-md-4 .img-thumbnail,
+    .modal-lg .col-md-4 .hover-image-placeholder {
+        width: 120px !important;
+        height: 120px !important;
+    }
+}
+
+@keyframes slideUpModal {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+/* ================================================
+   OPTIMIZACIÓN MÓVIL - CARDS GENÉRICAS
+   ================================================ */
+
+/* Tarjetas de lista (usuarios, turnos, movimientos) */
+.list-card {
+    border: none;
+    border-bottom: 1px solid #f3f4f6;
+    border-radius: 0 !important;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: background 0.15s;
+}
+
+.list-card:active {
+    background: #f9fafb;
+}
+
+.list-card-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--theme-default);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.1rem;
+}
+
+.list-card-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.list-card-title {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #111;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.list-card-subtitle {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 2px;
+}
+
+.list-card-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* Card-header responsive */
+@media (max-width: 575.98px) {
+    .card-header .d-flex {
+        gap: 8px;
+    }
+
+    .card-header h4 {
+        font-size: 1rem !important;
+    }
+
+    .card-header .btn {
+        font-size: 0.8rem;
+        padding: 6px 12px;
+    }
+
+    /* Buscador en header: ancho completo cuando solo hay búsqueda */
+    .card-header .input-group {
+        width: 160px !important;
+    }
+}
+
+/* ================================================
+   OPTIMIZACIÓN MÓVIL - INPUTS Y BOTONES
+   ================================================ */
+
+@media (max-width: 767.98px) {
+
+    /* Inputs más grandes para fácil toque */
+    .form-control,
+    .form-select {
+        height: 48px;
+        font-size: 16px !important;
+        /* Evitar zoom automático en iOS */
+        border-radius: 10px !important;
+    }
+
+    textarea.form-control {
+        height: auto !important;
+    }
+
+    /* Botones táctiles */
+    .btn {
+        min-height: 44px;
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .btn-sm {
+        min-height: 36px;
+    }
+
+    /* Btn-group para tipos de producto */
+    .btn-group .btn {
+        padding: 10px 8px;
+        font-size: 0.8rem;
+    }
+}
+
+/* ================================================
+   OPTIMIZACIÓN MÓVIL - TABLA RESPONSIVE
+   ================================================ */
+
+/* Ocultar columnas secundarias en móvil */
+@media (max-width: 575.98px) {
+    .table .d-none-xs {
+        display: none !important;
+    }
+}
+
+/* ================================================
+   OPTIMIZACIÓN MÓVIL - PRODUCTOS CARDS
+   ================================================ */
+
+@media (max-width: 575.98px) {
+
+    /* 3 columnas en móvil pequeño para productos */
+    .row.g-3 .col-6 {
+        width: 33.333% !important;
+    }
+
+    .producto-card .card-img-top {
+        height: 90px !important;
+    }
+
+    .producto-card .card-body p {
+        font-size: 0.75rem !important;
+    }
+}
+
+/* ================================================
+   MISC MÓVIL
+   ================================================ */
+
+@media (max-width: 767.98px) {
+
+    /* Contenedor sin padding lateral excesivo */
+    .container-fluid {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    /* Card sin radio para pantalla completa */
+    .card {
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+    }
+
+    /* Paginación compacta */
+    .pagination {
+        gap: 2px;
+    }
+
+    .page-link {
+        padding: 6px 10px !important;
+        font-size: 0.85rem !important;
+    }
+}
+
+/* ================================================
+   POS - PUNTO DE VENTA
+   ================================================ */
+
+/* ── POS: estructura base ── */
+.pos-catalog,
+.pos-cart {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.pos-catalog { background: #f0f2f5; }
+.pos-cart    { background: #fff; }
+
+/* Productos: flex normal */
+.pos-products-wrap {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Carrito: body y footer con position absolute para máxima fiabilidad */
+.pos-cart-header {
+    flex-shrink: 0;
+}
+
+.pos-cart-body {
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    position: absolute;
+    top: 57px;   /* altura del header del carrito */
+    left: 0;
+    right: 0;
+    bottom: 72px; /* altura del footer de botones */
+}
+
+.pos-cart-footer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 72px;
+    background: #fff;
+    border-top: 1px solid #dee2e6;
+    z-index: 5;
+}
+
+/* ── POS: layout fijo al viewport (desktop) ── */
+@media (min-width: 768px) {
+    .pos-layout {
+        position: fixed;
+        top: 142px;
+        left: 265px;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        flex-wrap: nowrap;
+        overflow: hidden;
+        transition: left 0.3s ease;
+    }
+
+    #pageWrapper.sidebar-open .pos-layout {
+        left: 0;
+    }
+
+    .pos-catalog {
+        flex: 0 0 75%;
+        max-width: 75%;
+        height: calc(100vh - 142px);
+        overflow: hidden;
+    }
+
+    .pos-cart {
+        flex: 0 0 25%;
+        max-width: 25%;
+        height: calc(100vh - 142px);
+        overflow: hidden;
+    }
+}
+
+/* ── POS: móvil ── */
+@media (max-width: 767.98px) {
+    .pos-layout {
+        margin-top: 52px;
+    }
+    .pos-catalog {
+        height: calc(100vh - 122px - 60px);
+    }
+    .pos-cart {
+        height: calc(100vh - 122px - 60px);
+    }
+    /* En móvil no hay footer absoluto */
+    .pos-cart-footer {
+        display: none !important;
+    }
+    .pos-cart-body {
+        bottom: 0;
+    }
+}
+
+.prod-card {
+    cursor: pointer;
+    transition: all .15s ease;
+    position: relative;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    border: 2px solid transparent !important;
+    border-radius: 10px !important;
+    overflow: hidden;
+}
+
+.prod-card:hover {
+    border-color: var(--theme-default) !important;
+    box-shadow: 0 4px 16px rgba(115, 102, 255, .25) !important;
+    transform: translateY(-2px);
+}
+
+.prod-card:active {
+    transform: scale(.97);
+}
+
+.prod-card--active {
+    border-color: var(--theme-default) !important;
+    background: rgba(115, 102, 255, .04) !important;
+}
+
+.prod-card__img-wrap {
+    position: relative;
+    height: 115px;
+    background: #fff;
+    overflow: hidden;
+}
+
+.prod-card__img {
+    height: 115px;
+    width: 100%;
+    object-fit: cover;
+    background: #fff;
+}
+
+.prod-card__placeholder {
+    height: 115px;
+    background: linear-gradient(135deg, rgba(115, 102, 255, .06), rgba(115, 102, 255, .14));
+}
+
+.prod-card__precio-overlay {
+    position: absolute;
+    bottom: 4px;
+    right: 6px;
+    background: rgba(0, 0, 0, .52);
+    color: #fff;
+    font-weight: 700;
+    font-size: .78rem;
+    padding: 1px 6px;
+    border-radius: 12px;
+    line-height: 1.6;
+    pointer-events: none;
+}
+
+.prod-card__nombre {
+    font-weight: 700;
+    font-size: .78rem;
+    line-height: 1.2;
+    color: #1f2937;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.prod-card .card-body {
+    padding: 4px 6px !important;
+}
+
+.prod-card__precio {
+    font-weight: 700;
+    font-size: .9rem;
+    color: #27ae60;
+}
+
+.prod-card__badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: var(--theme-default);
+    color: #fff;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .7rem;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(115, 102, 255, .4);
+    z-index: 1;
+}
+
+/* ── POS Bottom Bar (solo móvil) ── */
+.pos-bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1060;
+    background: #fff;
+    border-top: 1px solid #e5e7eb;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, .12);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    height: 68px;
+}
+
+.pos-act {
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    font-size: .62rem;
+    font-weight: 700;
+    height: 50px;
+    padding: 0 14px;
+    letter-spacing: .02em;
+    transition: opacity .15s;
+    position: relative;
+    text-transform: uppercase;
+    min-height: unset !important;
+}
+
+.pos-act:active {
+    opacity: .75;
+}
+
+.pos-act:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+.pos-act i {
+    font-size: 1.15rem;
+}
+
+.pos-act--danger {
+    background: #fef2f2;
+    color: #e74c3c;
+    border: 1.5px solid #fca5a5;
+}
+
+.pos-act--cart {
+    background: #fffbeb;
+    color: #d97706;
+    border: 1.5px solid #fcd34d;
+    flex: 1;
+}
+
+.pos-act--pay {
+    background: #27ae60;
+    color: #fff;
+    flex: 2;
+    font-size: .9rem;
+    box-shadow: 0 4px 12px rgba(39, 174, 96, .35);
+}
+
+.pos-act__badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: #e74c3c;
+    color: #fff;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .58rem;
+    font-weight: 700;
+}
+
+/* ── Selector de acompañamiento ── */
+.pos-selector-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(0, 0, 0, .45);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+@media (min-width: 768px) {
+    .pos-selector-overlay {
+        align-items: center;
+    }
+}
+
+@keyframes slideUpModal {
+    from {
+        transform: translateY(40px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.pos-selector {
+    background: #fff;
+    width: 100%;
+    max-width: 420px;
+    border-radius: 20px 20px 0 0;
+    padding: 20px 20px 28px;
+    animation: slideUpModal .25s ease-out;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, .18);
+}
+
+@media (min-width: 768px) {
+    .pos-selector {
+        border-radius: 16px;
+        padding: 28px;
+    }
+}
+
+.pos-selector__handle {
+    width: 40px;
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    margin: 0 auto 16px;
+}
+
+@media (min-width: 768px) {
+    .pos-selector__handle {
+        display: none;
+    }
+}
+
+.pos-selector__nombre {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1f2937;
+    text-align: center;
+    margin-bottom: 4px;
+}
+
+.pos-selector__sub {
+    text-align: center;
+    color: #6b7280;
+    font-size: .9rem;
+    margin-bottom: 20px;
+}
+
+.pos-selector__opciones {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.pos-sel-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 8px;
+    border: 2px solid #e5e7eb;
+    background: #fafafa;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all .15s;
+}
+
+.pos-sel-btn:hover,
+.pos-sel-btn:active {
+    border-color: var(--theme-default);
+    background: rgba(115, 102, 255, .06);
+}
+
+.pos-sel-btn--highlight {
+    border-color: var(--theme-default);
+    background: rgba(115, 102, 255, .06);
+}
+
+.pos-sel-btn__icon {
+    font-size: 2rem;
+    line-height: 1;
+    display: block;
+}
+
+.pos-sel-btn__label {
+    font-weight: 700;
+    font-size: .85rem;
+    color: #374151;
+}
+
+.pos-selector__cancel {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    border: none;
+    background: transparent;
+    color: #9ca3af;
+    font-size: .9rem;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: background .15s;
+}
+
+.pos-selector__cancel:hover {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+/* ================================================
+   MÓDULOS - BARRA DE TÍTULO FIJA (bajo el header)
+   ================================================ */
+
+.module-sticky-header {
+    position: fixed !important;
+    top: 90px;
+    left: 265px;
+    right: 0;
+    height: 52px;
+    z-index: 1029;
+    background: #fff;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    transition: left 0.3s ease;
+}
+
+.module-sticky-header>div {
+    width: 100%;
+}
+
+#pageWrapper.sidebar-open .module-sticky-header {
+    left: 0;
+}
+
+@media (max-width: 991.98px) {
+    .module-sticky-header {
+        top: 70px;
+        left: 0 !important;
+    }
+}
+
+/* Área de scroll de módulos (entre module-sticky-header y paginate-bar) */
+.module-scroll-area {
+    position: fixed;
+    top: 142px;
+    left: 265px;
+    right: 0;
+    bottom: 52px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: #fff;
+    transition: left 0.3s ease;
+}
+
+#pageWrapper.sidebar-open .module-scroll-area {
+    left: 0;
+}
+
+@media (max-width: 991.98px) {
+    .module-scroll-area {
+        top: 122px;
+        left: 0 !important;
+    }
+}
+
+/* Evitar overflow horizontal en módulos */
+.page-body {
+    overflow-x: hidden;
+}
