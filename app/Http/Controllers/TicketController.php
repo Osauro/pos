@@ -26,16 +26,17 @@ class TicketController extends Controller
     /**
      * Ticket del cliente: todos los ítems con precios, total y datos del turno.
      */
-    public function cliente(Venta $venta)
+    public function cliente(Request $request, Venta $venta)
     {
         $venta->load(['items.producto', 'turno.encargado', 'usuario']);
 
         $items = $venta->items->filter(fn($item) => $item->producto)->values();
 
-        $width = config('printer.width', 80);
-        $negocio = config('printer.negocio', 'Mi Negocio');
+        $width     = config('printer.width', 80);
+        $negocio   = config('printer.negocio', 'Mi Negocio');
+        $soloTicket = $request->boolean('nocomanda'); // true → solo ticket, sin comanda
 
-        return view('tickets.cliente', compact('venta', 'items', 'width', 'negocio'));
+        return view('tickets.cliente', compact('venta', 'items', 'width', 'negocio', 'soloTicket'));
     }
 
     /**

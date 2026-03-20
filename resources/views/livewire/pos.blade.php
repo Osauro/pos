@@ -314,8 +314,21 @@
     $wire.on('imprimir-venta', (data) => {
         const ventaId = (data[0] || data).ventaId;
         if (!ventaId) return;
-        // Ticket + Comanda en una sola ventana: imprime dos hojas y cierra automáticamente
-        window.open(`/ticket/cliente/${ventaId}`, '_blank', WIN_OPTS);
+
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+        if (isMobile) {
+            // Móvil: dos ventanas separadas para evitar problemas con page-break
+            // 1º → ticket del cliente (sin comanda)
+            window.open(`/ticket/cliente/${ventaId}?nocomanda=1`, '_blank', WIN_OPTS);
+            // 2º → comanda de cocina, con pequeño delay para que el SO no bloquee el popup
+            setTimeout(() => {
+                window.open(`/ticket/comanda/${ventaId}`, '_blank', WIN_OPTS);
+            }, 2500);
+        } else {
+            // Escritorio: ventana única con corte de página entre ticket y comanda
+            window.open(`/ticket/cliente/${ventaId}`, '_blank', WIN_OPTS);
+        }
     });
 </script>
 @endscript

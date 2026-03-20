@@ -223,7 +223,7 @@
         $comandaItems = $items->filter(fn($i) => $i->producto->tipo !== 'Refrescos')->values();
         $sepCmd = $width === 58 ? str_repeat('-', 24) : str_repeat('-', 32);
     @endphp
-    @if($comandaItems->count() > 0)
+    @if(!($soloTicket ?? false) && $comandaItems->count() > 0)
     <div class="comanda-wrap">
         <div class="cmd-venta">VENTA #{{ $venta->numero_venta }}</div>
 
