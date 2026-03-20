@@ -5,6 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ticket #{{ $venta->numero_venta }}</title>
     <style>
+        @font-face {
+            font-family: 'FuenteA';
+            font-weight: 400;
+            src: url('/fonts/courier-prime-regular.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'FuenteA';
+            font-weight: 700;
+            src: url('/fonts/courier-prime-bold.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'FuenteB';
+            font-weight: 400;
+            src: url('/fonts/nova-mono-regular.woff2') format('woff2');
+        }
+
         @php
             $pageWidth = $width === 58 ? '58mm' : '80mm';
         @endphp
@@ -19,7 +35,7 @@
         * { box-sizing: border-box; }
 
         body {
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'FuenteA', 'Courier New', monospace;
             font-size: {{ $width === 58 ? '11pt' : '12pt' }};
             margin: 0;
             padding: 0 1mm 5mm;
@@ -59,6 +75,7 @@
         .info-row {
             display: flex;
             justify-content: space-between;
+            font-family: 'FuenteB', 'Courier New', monospace;
             margin-bottom: 0.5mm;
         }
 
