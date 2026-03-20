@@ -4,8 +4,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Comanda #{{ $venta->numero_venta }}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <style>
         @php
             $pageWidth = $width === 58 ? '58mm' : '80mm';
@@ -14,15 +12,15 @@
         @media print {
             @page {
                 size: {{ $pageWidth }} auto;
-                margin: 2mm 1mm 0;
+                margin: 2mm 2mm 0;
             }
         }
 
         * { box-sizing: border-box; }
 
         body {
-            font-family: 'Share Tech Mono', 'Courier New', monospace;
-            font-size: {{ $width === 58 ? '11pt' : '12pt' }};
+            font-family: 'Courier New', Courier, monospace;
+            font-size: {{ $width === 58 ? '8pt' : '9pt' }};
             margin: 0;
             padding: 1mm 2mm 4mm;
             width: 100%;
@@ -31,7 +29,7 @@
         }
 
         .venta-num {
-            font-size: {{ $width === 58 ? '15pt' : '18pt' }};
+            font-size: {{ $width === 58 ? '16pt' : '20pt' }};
             font-weight: bold;
             text-align: center;
             margin-bottom: 1mm;
@@ -47,14 +45,14 @@
         }
 
         .item-nombre {
-            font-size: {{ $width === 58 ? '10pt' : '13pt' }};
+            font-size: {{ $width === 58 ? '13pt' : '16pt' }};
             font-weight: bold;
             line-height: 1.3;
             flex: 1;
         }
 
         .item-detalle {
-            font-size: {{ $width === 58 ? '10pt' : '13pt' }};
+            font-size: {{ $width === 58 ? '13pt' : '16pt' }};
             font-weight: bold;
             white-space: nowrap;
         }
