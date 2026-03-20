@@ -260,30 +260,14 @@
     <script>
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-        if (isMobile) {
-            // Android/iOS bloquea window.print() automático en ventanas abiertas con window.open().
-            // Mostramos un botón que el usuario toca — ese sí cuenta como gesto del usuario.
-            document.addEventListener('DOMContentLoaded', function () {
-                var btn = document.createElement('button');
-                btn.textContent = '🖨️ Imprimir ticket';
-                btn.style.cssText = [
-                    'position:fixed', 'bottom:16px', 'left:50%', 'transform:translateX(-50%)',
-                    'background:#29adb2', 'color:#fff', 'border:none', 'border-radius:10px',
-                    'padding:14px 32px', 'font-size:18px', 'font-weight:bold',
-                    'box-shadow:0 4px 16px rgba(0,0,0,.3)', 'z-index:9999', 'cursor:pointer',
-                    'white-space:nowrap'
-                ].join(';');
-                btn.addEventListener('click', function () {
-                    window.print();
-                    btn.style.display = 'none';
-                });
-                document.body.appendChild(btn);
-            });
-        } else {
-            // Escritorio: auto-print y cierra tras imprimir
-            window.addEventListener('load', function () {
-                setTimeout(function () { window.print(); }, 350);
-            });
+        window.addEventListener('load', function () {
+            setTimeout(function () {
+                window.print();
+            }, 350);
+        });
+
+        // Solo cerrar automáticamente en escritorio
+        if (!isMobile) {
             window.addEventListener('afterprint', function () {
                 setTimeout(function () { window.close(); }, 300);
             });
