@@ -321,10 +321,10 @@
             // Móvil: dos ventanas separadas para evitar problemas con page-break
             // 1º → ticket del cliente (sin comanda)
             window.open(`/ticket/cliente/${ventaId}?nocomanda=1`, '_blank', WIN_OPTS);
-            // 2º → comanda de cocina, con pequeño delay para que el SO no bloquee el popup
+            // 2º → comanda de cocina, tras 10 segundos para dar tiempo a imprimir el ticket
             setTimeout(() => {
                 window.open(`/ticket/comanda/${ventaId}`, '_blank', WIN_OPTS);
-            }, 2500);
+            }, 10000);
         } else {
             // Escritorio: ventana única con corte de página entre ticket y comanda
             window.open(`/ticket/cliente/${ventaId}`, '_blank', WIN_OPTS);
