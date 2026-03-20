@@ -2,19 +2,10 @@
 /**
  * deploy.php — Auto-actualización para pos.misocio.bo
  *
- * Uso:  https://pos.misocio.bo/deploy.php?token=TU_TOKEN_SECRETO
- *
- * En GitHub: Settings > Webhooks > Payload URL = https://pos.misocio.bo/deploy.php?token=TU_TOKEN_SECRETO
+ * Uso: https://pos.misocio.bo/deploy.php
+ * En GitHub: Settings > Webhooks > Payload URL = https://pos.misocio.bo/deploy.php
  *            Content type = application/json   |   Just the push event
  */
-
-// ── Seguridad: token en query string ─────────────────────────────────────────
-define('DEPLOY_TOKEN', 'CAMBIA_ESTE_TOKEN');   // <-- cambia esto
-
-if (($_GET['token'] ?? '') !== DEPLOY_TOKEN) {
-    http_response_code(403);
-    exit("Acceso denegado.\n");
-}
 
 // ── Configuración ─────────────────────────────────────────────────────────────
 $phpBin      = '/usr/local/bin/php';
