@@ -138,6 +138,52 @@
 
     @include('partials.paginate-bar', ['results' => $movimientos, 'storageKey' => 'movimientos'])
 
+    <!-- Modal Inicio de Caja (primer movimiento del día) -->
+    @if ($mostrarModalCambio)
+        <div class="modal fade show d-block" tabindex="-1" role="dialog"
+            style="background-color: rgba(0,0,0,0.6);">
+            <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header border-0 pb-1"
+                        style="background: linear-gradient(135deg, #212529 0%, #343a40 100%);">
+                        <div class="text-white">
+                            <h5 class="modal-title mb-0">
+                                <i class="fa-solid fa-cash-register me-2 text-warning"></i>Iniciar Caja
+                            </h5>
+                            <small class="opacity-75">Primer movimiento del día</small>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white"
+                            wire:click="cancelarCambio"></button>
+                    </div>
+                    <div class="modal-body pt-3">
+                        <p class="text-muted small text-center mb-3">
+                            Ingresa el monto de cambio con el que arranca la caja hoy.
+                        </p>
+                        <input type="number"
+                            id="cambio-input"
+                            wire:model="montoCambio"
+                            class="form-control form-control-lg text-center @error('montoCambio') is-invalid @enderror"
+                            placeholder="0.00"
+                            min="0.01"
+                            step="0.01"
+                            wire:keydown.enter="confirmarCambio">
+                        @error('montoCambio')
+                            <div class="invalid-feedback text-center">{{ $message }}</div>
+                        @enderror
+                    </div>
+                    <div class="modal-footer border-0 pt-0 gap-2">
+                        <button type="button" class="btn btn-outline-secondary flex-fill"
+                            wire:click="cancelarCambio">Cancelar</button>
+                        <button type="button" class="btn btn-success flex-fill"
+                            wire:click="confirmarCambio">
+                            <i class="fa-solid fa-check me-1"></i> Confirmar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- Modal para Registrar Movimiento -->
     @if ($mostrarModal)
         <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-labelledby="modalcrud"
@@ -150,41 +196,45 @@
                     </div>
                     <div class="modal-body">
                         <form wire:submit.prevent="save">
+                            {{-- Tipo de Movimiento: botones toggle --}}
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Tipo de Movimiento</label>
-                                <div class="d-flex gap-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" wire:model="tipo" value="ingreso"
-                                            id="tipoIngreso">
-                                        <label class="form-check-label" for="tipoIngreso">
-                                            <i class="fa-solid fa-arrow-up text-success"></i> Ingreso
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" wire:model="tipo" value="egreso"
-                                            id="tipoEgreso">
-                                        <label class="form-check-label" for="tipoEgreso">
-                                            <i class="fa-solid fa-arrow-down text-danger"></i> Egreso
-                                        </label>
-                                    </div>
+                                <div class="btn-group w-100" role="group">
+                                    <button type="button"
+                                        class="btn {{ $tipo_movimiento === 'egreso' ? 'btn-danger' : 'btn-outline-danger' }}"
+                                        wire:click="$set('tipo_movimiento', 'egreso')">
+                                        <i class="fa-solid fa-arrow-down me-1"></i> Egreso
+                                    </button>
+                                    <button type="button"
+                                        class="btn {{ $tipo_movimiento === 'ingreso' ? 'btn-success' : 'btn-outline-success' }}"
+                                        wire:click="$set('tipo_movimiento', 'ingreso')">
+                                        <i class="fa-solid fa-arrow-up me-1"></i> Ingreso
+                                    </button>
                                 </div>
                             </div>
 
+                            {{-- Monto primero con autofocus --}}
                             <div class="mb-3">
-                                <label class="form-label fw-semibold">Detalle</label>
-                                <input type="text" class="form-control @error('detalle') is-invalid @enderror"
-                                    wire:model="detalle" placeholder="Descripción del movimiento">
-                                @error('detalle')
+                                <label class="form-label fw-semibold">Monto (Bs.)</label>
+                                <input type="number" step="0.01" id="monto-input"
+                                    class="form-control @error('monto') is-invalid @enderror"
+                                    wire:model="monto"
+                                    placeholder="0.00">
+                                @error('monto')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
 
+                            {{-- Detalle opcional --}}
                             <div class="mb-3">
-                                <label class="form-label fw-semibold">Monto (Bs.)</label>
-                                <input type="number" step="0.01"
-                                    class="form-control @error('monto') is-invalid @enderror" wire:model="monto"
-                                    placeholder="0.00">
-                                @error('monto')
+                                <label class="form-label fw-semibold">
+                                    Detalle <small class="text-muted fw-normal">(opcional)</small>
+                                </label>
+                                <input type="text"
+                                    class="form-control @error('detalle') is-invalid @enderror"
+                                    wire:model="detalle"
+                                    placeholder="Descripción del movimiento">
+                                @error('detalle')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -192,7 +242,10 @@
                             <div class="d-flex gap-2 justify-content-end">
                                 <button type="button" class="btn btn-secondary"
                                     wire:click="closeModal">Cancelar</button>
-                                <button type="submit" class="btn btn-primary">Guardar</button>
+                                <button type="submit"
+                                    class="btn {{ $tipo_movimiento === 'egreso' ? 'btn-danger' : 'btn-success' }}">
+                                    Guardar
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -254,6 +307,20 @@
 
         $wire.on('calendarioAbierto', (data) => {
             cargarFlatpickrMov(() => initFlatpickrMov(data));
+        });
+
+        $wire.on('focusMonto', () => {
+            setTimeout(() => {
+                const input = document.getElementById('monto-input');
+                if (input) { input.focus(); input.select(); }
+            }, 150);
+        });
+
+        $wire.on('focusCambio', () => {
+            setTimeout(() => {
+                const input = document.getElementById('cambio-input');
+                if (input) { input.focus(); input.select(); }
+            }, 150);
         });
 
         function initFlatpickrMov({ fechasValidas, rangoTurno, todosTurnos, fechaSeleccionada, turnoSeleccionadoId }) {

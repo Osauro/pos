@@ -9,14 +9,17 @@ use App\Traits\WithPermisos;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Illuminate\Support\Facades\DB;
 
 class Movimientos extends Component
 {
     use WithPagination, WithSwal, WithPermisos;
 
-    public $movimiento_id, $turno_id, $detalle, $ingreso = 0, $egreso = 0, $saldo = 0;
+    public $movimiento_id, $turno_id, $detalle, $monto = 0, $ingreso = 0, $egreso = 0, $saldo = 0;
     public $isOpen = false;
     public $tipo_movimiento = 'egreso'; // egreso o ingreso
+    public bool $mostrarModalCambio = false;
+    public string $montoCambio = '';
     public $perPage = 10;
     public $fecha_inicio = null;
     public $fecha_fin = null;
@@ -28,9 +31,8 @@ class Movimientos extends Component
 
     protected $rules = [
         'turno_id' => 'required|exists:turnos,id',
-        'detalle' => 'required|string|max:255',
-        'ingreso' => 'nullable|numeric|min:0',
-        'egreso' => 'nullable|numeric|min:0'
+        'detalle'  => 'nullable|string|max:255',
+        'monto'    => 'required|numeric|min:0.01',
     ];
 
     public function mount()
@@ -174,8 +176,100 @@ class Movimientos extends Component
     public function create()
     {
         $this->resetInputFields();
+
+        // Auto-detectar turno activo para el usuario actual
+        if ($this->turno_seleccionado) {
+            $this->turno_id = $this->turno_seleccionado;
+        } else {
+            $turnoActivo = Turno::activo()->where('encargado_id', auth()->id())->first();
+            if ($turnoActivo) {
+                $this->turno_id = $turnoActivo->id;
+            }
+        }
+
+        // Primer movimiento del día (después de las 2:00) → flujo inicio de caja
+        if ($this->turno_id && $this->esPrimerMovimientoDelDia((int) $this->turno_id)) {
+            $this->mostrarModalCambio = true;
+            $this->dispatch('focusCambio');
+            return;
+        }
+
         $this->mostrarModal = true;
         $this->isOpen = true;
+        $this->dispatch('focusMonto');
+    }
+
+    private function esPrimerMovimientoDelDia(int $turnoId): bool
+    {
+        $desde = now()->copy()->setTime(2, 0, 0);
+        return !Movimiento::where('turno_id', $turnoId)
+            ->where('created_at', '>=', $desde)
+            ->exists();
+    }
+
+    public function confirmarCambio(): void
+    {
+        $this->validate([
+            'montoCambio' => 'required|numeric|min:0.01',
+        ], [
+            'montoCambio.required' => 'Ingresa el monto del cambio.',
+            'montoCambio.numeric'  => 'El monto debe ser un número.',
+            'montoCambio.min'      => 'El monto debe ser mayor a 0.',
+        ]);
+
+        if (!$this->turno_id) {
+            $this->cancelarCambio();
+            return;
+        }
+
+        DB::transaction(function () {
+            $saldoActual = (float) (Movimiento::where('turno_id', $this->turno_id)
+                ->orderBy('id', 'desc')
+                ->value('saldo') ?? 0);
+
+            // Egresar saldo anterior dejándolo en 0
+            if ($saldoActual > 0) {
+                Movimiento::create([
+                    'turno_id' => $this->turno_id,
+                    'detalle'  => 'Retiro de saldo al iniciar caja',
+                    'ingreso'  => 0,
+                    'egreso'   => $saldoActual,
+                    'saldo'    => 0,
+                ]);
+            }
+
+            // Ingresar el cambio inicial
+            Movimiento::create([
+                'turno_id' => $this->turno_id,
+                'detalle'  => 'Inicio de caja',
+                'ingreso'  => (float) $this->montoCambio,
+                'egreso'   => 0,
+                'saldo'    => (float) $this->montoCambio,
+            ]);
+        });
+
+        $this->showSuccessNotification('Inicio de caja registrado');
+        $this->cancelarCambio();
+
+        // Actualizar filtro al día de hoy para que la lista refleje el nuevo día
+        $this->fecha_seleccionada = now()->toDateString();
+        $this->resetPage();
+    }
+
+    public function cancelarCambio(): void
+    {
+        $this->mostrarModalCambio = false;
+        $this->montoCambio = '';
+        $this->resetValidation('montoCambio');
+    }
+
+    public function save()
+    {
+        if ($this->movimiento_id) {
+            $this->update();
+        } else {
+            $this->store();
+        }
     }
 
     public function abrirModalFiltro()
@@ -307,25 +401,33 @@ class Movimientos extends Component
 
     public function store()
     {
-        $this->validate();
+        $this->validate([
+            'turno_id' => 'required|exists:turnos,id',
+            'monto'    => 'required|numeric|min:0.01',
+        ]);
 
-        // Calcular el saldo basado en el último movimiento del turno
+        // Si no se escribió detalle, usar el tipo de operación como etiqueta
+        $detalle = trim($this->detalle) ?: ucfirst($this->tipo_movimiento);
+
+        $ingreso = $this->tipo_movimiento === 'ingreso' ? $this->monto : 0;
+        $egreso  = $this->tipo_movimiento === 'egreso'  ? $this->monto : 0;
+
         $ultimoMovimiento = Movimiento::where('turno_id', $this->turno_id)
             ->orderBy('id', 'desc')
             ->first();
 
         $saldoAnterior = $ultimoMovimiento ? $ultimoMovimiento->saldo : 0;
-        $nuevoSaldo = $saldoAnterior + ($this->ingreso ?? 0) - ($this->egreso ?? 0);
+        $nuevoSaldo    = $saldoAnterior + $ingreso - $egreso;
 
         Movimiento::create([
             'turno_id' => $this->turno_id,
-            'detalle' => $this->detalle,
-            'ingreso' => $this->ingreso ?? 0,
-            'egreso' => $this->egreso ?? 0,
-            'saldo' => $nuevoSaldo
+            'detalle'  => $detalle,
+            'ingreso'  => $ingreso,
+            'egreso'   => $egreso,
+            'saldo'    => $nuevoSaldo,
         ]);
 
-        $this->showSuccessNotification('Movimiento creado exitosamente');
+        $this->showSuccessNotification('Movimiento registrado exitosamente');
         $this->closeModal();
     }
 
@@ -336,7 +438,15 @@ class Movimientos extends Component
         $this->turno_id = $movimiento->turno_id;
         $this->detalle = $movimiento->detalle;
         $this->ingreso = $movimiento->ingreso;
-        $this->egreso = $movimiento->egreso;
+        $this->egreso  = $movimiento->egreso;
+
+        if ($movimiento->ingreso > 0) {
+            $this->tipo_movimiento = 'ingreso';
+            $this->monto = $movimiento->ingreso;
+        } else {
+            $this->tipo_movimiento = 'egreso';
+            $this->monto = $movimiento->egreso;
+        }
 
         $this->isOpen = true;
         $this->mostrarModal = true;
@@ -344,13 +454,20 @@ class Movimientos extends Component
 
     public function update()
     {
-        $this->validate();
+        $this->validate([
+            'turno_id' => 'required|exists:turnos,id',
+            'monto'    => 'required|numeric|min:0.01',
+        ]);
+
+        $detalle = trim($this->detalle) ?: ucfirst($this->tipo_movimiento);
+        $ingreso = $this->tipo_movimiento === 'ingreso' ? $this->monto : 0;
+        $egreso  = $this->tipo_movimiento === 'egreso'  ? $this->monto : 0;
 
         $movimiento = Movimiento::find($this->movimiento_id);
         $movimiento->turno_id = $this->turno_id;
-        $movimiento->detalle = $this->detalle;
-        $movimiento->ingreso = $this->ingreso ?? 0;
-        $movimiento->egreso = $this->egreso ?? 0;
+        $movimiento->detalle  = $detalle;
+        $movimiento->ingreso  = $ingreso;
+        $movimiento->egreso   = $egreso;
 
         // Recalcular saldo
         $ultimoMovimiento = Movimiento::where('turno_id', $this->turno_id)
@@ -359,7 +476,7 @@ class Movimientos extends Component
             ->first();
 
         $saldoAnterior = $ultimoMovimiento ? $ultimoMovimiento->saldo : 0;
-        $movimiento->saldo = $saldoAnterior + $movimiento->ingreso - $movimiento->egreso;
+        $movimiento->saldo = $saldoAnterior + $ingreso - $egreso;
 
         $movimiento->save();
 
@@ -391,6 +508,7 @@ class Movimientos extends Component
         $this->movimiento_id = null;
         $this->turno_id = '';
         $this->detalle = '';
+        $this->monto = 0;
         $this->ingreso = 0;
         $this->egreso = 0;
         $this->saldo = 0;
