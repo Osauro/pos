@@ -12,6 +12,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"image"
+	_ "image/png"
 	"io"
 	"net"
 	"net/http"
@@ -284,6 +286,79 @@ func listPrinters() ([]string, error) {
 	return names, nil
 }
 
+// paperDots devuelve el ancho máximo imprimible en puntos según el mm del papel.
+func paperDots(paperMM int) int {
+	switch paperMM {
+	case 58:
+		return 384
+	case 110:
+		return 832
+	default: // 80
+		return 576
+	}
+}
+
+// logoESCPOS lee C:\Pos\logo.png y genera los bytes ESC/POS GS v 0 (imagen raster).
+// Escala el PNG para que quepa en el ancho del papel configurado.
+// Devuelve nil si no hay logo o hay error.
+func logoESCPOS(cfg Config) []byte {
+	f, err := os.Open(logoPath())
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+
+	img, _, err := image.Decode(f)
+	if err != nil {
+		logMsg("Logo decode: " + err.Error())
+		return nil
+	}
+
+	maxW := paperDots(cfg.PaperWidth)
+	bounds := img.Bounds()
+	srcW := bounds.Max.X - bounds.Min.X
+	srcH := bounds.Max.Y - bounds.Min.Y
+
+	dstW := srcW
+	dstH := srcH
+	if srcW > maxW {
+		dstH = srcH * maxW / srcW
+		dstW = maxW
+	}
+	if dstW <= 0 || dstH <= 0 {
+		return nil
+	}
+
+	bytesPerRow := (dstW + 7) / 8
+	raster := make([]byte, bytesPerRow*dstH)
+
+	for y := 0; y < dstH; y++ {
+		srcY := bounds.Min.Y + y*srcH/dstH
+		for x := 0; x < dstW; x++ {
+			srcX := bounds.Min.X + x*srcW/dstW
+			r, g, b, _ := img.At(srcX, srcY).RGBA()
+			// Luminancia ponderada (valores RGBA son de 16 bits)
+			lum := (299*r + 587*g + 114*b) / 1000
+			if lum < 32768 { // oscuro → imprimir punto
+				raster[y*bytesPerRow+x/8] |= 1 << uint(7-(x%8))
+			}
+		}
+	}
+
+	var b bytes.Buffer
+	b.Write([]byte{0x1B, 0x61, 0x01})              // centrar
+	b.Write([]byte{0x1D, 0x76, 0x30, 0x00})         // GS v 0, modo normal
+	b.WriteByte(byte(bytesPerRow & 0xFF))
+	b.WriteByte(byte(bytesPerRow >> 8))
+	b.WriteByte(byte(dstH & 0xFF))
+	b.WriteByte(byte(dstH >> 8))
+	b.Write(raster)
+	b.WriteByte(0x0A)                               // LF
+	b.Write([]byte{0x1B, 0x61, 0x00})              // volver a izquierda
+	logMsg(fmt.Sprintf("Logo ESC/POS: %dx%d → %d bytes", dstW, dstH, b.Len()))
+	return b.Bytes()
+}
+
 // ─────────────────────────── imprimir desde URL ────────────────
 
 // handlePrintURL descifra el payload del protocolo print:// y envía
@@ -298,6 +373,8 @@ func handlePrintURL(rawURL string) {
 		return
 	}
 	payload := m[1]
+	// Limpiar caracteres de control que el shell pueda agregar al final
+	payload = strings.TrimRight(payload, "\r\n\t ")
 	logMsg(fmt.Sprintf("payload len=%d primeros40=%s", len(payload), payload[:min(40, len(payload))]))
 
 	// Eliminar prefijo de versión antigua (ej: TpV_v1_) si está presente
@@ -340,6 +417,14 @@ func handlePrintURL(rawURL string) {
 		return
 	}
 	logMsg(fmt.Sprintf("ESC/POS bytes: %d", len(escData)))
+
+	// Preponer logo local si existe en C:\Pos\logo.png
+	if logoBytes := logoESCPOS(cfg); len(logoBytes) > 0 {
+		combined := make([]byte, len(logoBytes)+len(escData))
+		copy(combined, logoBytes)
+		copy(combined[len(logoBytes):], escData)
+		escData = combined
+	}
 
 	if cfg.PrinterName == "" {
 		logMsg("No hay impresora configurada")

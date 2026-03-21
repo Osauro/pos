@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Venta;
-use Mike42\Escpos\EscposImage;
 use Mike42\Escpos\Printer;
 use Mike42\Escpos\PrintConnectors\DummyPrintConnector;
 
@@ -69,19 +68,6 @@ class EscposPrintService
 
         $connector = new DummyPrintConnector();
         $printer   = new Printer($connector);
-
-        // Logo si existe en storage/app/logo.png
-        $logoPath = storage_path('app/logo.png');
-        if (file_exists($logoPath)) {
-            try {
-                $logo = EscposImage::load($logoPath, false);
-                $printer->setJustification(Printer::JUSTIFY_CENTER);
-                $printer->graphics($logo);
-                $printer->feed(1);
-            } catch (\Throwable) {
-                // Sin logo — continuar
-            }
-        }
 
         // Cabecera
         $printer->setJustification(Printer::JUSTIFY_CENTER);
