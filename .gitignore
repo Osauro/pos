@@ -22,3 +22,12 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Debug / archivos temporales
+test_print.php
+
+# Agente de impresión — binarios y datos locales
+agent/*.exe
+agent/config.json
+agent/logo.png
+logo.png

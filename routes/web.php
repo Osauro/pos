@@ -10,6 +10,7 @@ use App\Livewire\Ventas;
 use App\Livewire\Pos;
 use App\Livewire\Login;
 use App\Http\Controllers\TicketController;
+use App\Http\Controllers\EscposController;
 
 // Rutas públicas (login)
 Route::get('/login', Login::class)->name('login')->middleware('guest');
@@ -43,5 +44,13 @@ Route::middleware(['auth'])->group(function () {
     // Versiones PDF (para impresión en móvil)
     Route::get('/ticket/cliente/{venta}/pdf', [TicketController::class, 'clientePdf'])->name('ticket.cliente.pdf');
     Route::get('/ticket/comanda/{venta}/pdf', [TicketController::class, 'comandaPdf'])->name('ticket.comanda.pdf');
+});
+
+// ── ESC/POS directo (agente print-agent.php) ──────────────────────────────────
+// Protegido por token (X-Printer-Token header o ?_pt=...)
+// Solo accesible desde la máquina local (el agente corre en el mismo equipo)
+Route::prefix('escpos')->group(function () {
+    Route::get('/ticket/{venta}',  [EscposController::class, 'ticket'])->name('escpos.ticket');
+    Route::get('/comanda/{venta}', [EscposController::class, 'comanda'])->name('escpos.comanda');
 });
 

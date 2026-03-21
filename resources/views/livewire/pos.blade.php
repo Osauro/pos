@@ -312,19 +312,29 @@
     const WIN_OPTS = 'toolbar=0,scrollbars=0,location=0,statusbar=0,menubar=0,resizable=0,width=300,height=700';
 
     $wire.on('imprimir-venta', (data) => {
-        const ventaId = (data[0] || data).ventaId;
+        const d          = data[0] || data;
+        const ventaId    = d.ventaId;
+        const ticketUrl  = d.ticketUrl  ?? null;   // print://{encryptedPayload}
+        const comandaUrl = d.comandaUrl ?? null;
         if (!ventaId) return;
 
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-        if (isMobile) {
-            // Móvil: pestaña completa (sin WIN_OPTS) para que window.print() no sea bloqueado
+        if (!isMobile && ticketUrl) {
+            // ── Modo exe directo: datos encriptados en la URL ────────────────
+            // print-agent.exe desencripta y manda ESC/POS sin diálogo
+            window.location.href = ticketUrl;
+            if (comandaUrl) {
+                setTimeout(() => { window.location.href = comandaUrl; }, 800);
+            }
+        } else if (isMobile) {
+            // ── Móvil: pestaña completa (sin WIN_OPTS) ───────────────────────
             window.open(`/ticket/cliente/${ventaId}?nocomanda=1`, '_blank');
             setTimeout(() => {
                 window.open(`/ticket/comanda/${ventaId}`, '_blank');
             }, 10000);
         } else {
-            // Escritorio: ventana pequeña estilo impresora
+            // ── Escritorio: ventana pequeña estilo impresora (fallback) ──────
             window.open(`/ticket/cliente/${ventaId}`, '_blank', WIN_OPTS);
         }
     });

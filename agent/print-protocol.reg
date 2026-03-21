@@ -1,0 +1,30 @@
+Windows Registry Editor Version 5.00
+
+; ============================================================
+; Protocolo print:// para impresión directa ESC/POS desde web
+; Proyecto TPV — print-agent.exe (standalone, sin PHP ni Laragon)
+;
+; INSTRUCCIONES:
+;   1. Copiar print-agent.exe y config.json a C:\Pos\
+;      (puedes cambiar la ruta, solo actualiza la clave "command" abajo)
+;   2. Hacer doble clic en este archivo e importarlo al Registro.
+;   3. Reiniciar el navegador para que reconozca el nuevo protocolo.
+;
+; Para configurar la impresora, ejecutar:
+;   C:\Pos\print-agent.exe --config
+;   (o doble clic sobre abrir-configurador.bat)
+; ============================================================
+
+[HKEY_CLASSES_ROOT\print]
+@="URL:print Protocol"
+"URL Protocol"=""
+"EditFlags"=dword:00000002
+
+[HKEY_CLASSES_ROOT\print\shell]
+@="open"
+
+[HKEY_CLASSES_ROOT\print\shell\open]
+@=""
+
+[HKEY_CLASSES_ROOT\print\shell\open\command]
+@="\"C:\\Pos\\print-agent.exe\" \"%1\""

@@ -487,7 +487,19 @@ class Pos extends Component
 
             // Disparar evento de impresión (comanda + ticket)
             if (config('printer.auto_comanda') || config('printer.auto_ticket')) {
-                $this->dispatch('imprimir-venta', ventaId: $ventaCompletadaId);
+                if (config('printer.escpos_enabled')) {
+                    // Modo exe directo: datos encriptados en la URL print://
+                    $ventaParaImprimir = \App\Models\Venta::with(['items.producto', 'turno.encargado', 'usuario'])
+                        ->find($ventaCompletadaId);
+                    $svc = app(\App\Services\EscposPrintService::class);
+                    $this->dispatch('imprimir-venta',
+                        ventaId:    $ventaCompletadaId,
+                        ticketUrl:  config('printer.auto_ticket')  ? $svc->ticketUrl($ventaParaImprimir)  : null,
+                        comandaUrl: config('printer.auto_comanda') ? $svc->comandaUrl($ventaParaImprimir) : null,
+                    );
+                } else {
+                    $this->dispatch('imprimir-venta', ventaId: $ventaCompletadaId);
+                }
             }
 
         } catch (\Exception $e) {
