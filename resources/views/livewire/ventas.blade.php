@@ -56,9 +56,9 @@
                                                             </button>
                                                             @if(!isset($venta->estado) || $venta->estado !== 'Cancelado')
                                                                 <button class="btn btn-sm btn-success"
-                                                                    wire:click="imprimirTicket({{ $venta->id }})"
-                                                                    title="Imprimir ticket">
-                                                                    <i class="fa-solid fa-receipt"></i>
+                                                                    wire:click="reimprimirVenta({{ $venta->id }})"
+                                                                    title="Reimprimir ticket y comanda">
+                                                                    <i class="fa-solid fa-print"></i>
                                                                 </button>
                                                             @endif
                                                         </div>
@@ -194,6 +194,13 @@
                                 <span><i class="fa-solid fa-calendar me-1"></i>{{ $ventaSeleccionada->fecha_hora ? $ventaSeleccionada->fecha_hora->format('d/m/Y H:i') : ($ventaSeleccionada->created_at ? $ventaSeleccionada->created_at->format('d/m/Y H:i') : '—') }}</span>
                             </div>
                             <div class="d-flex gap-1">
+                                @if ($ventaSeleccionada->estado === 'Completo')
+                                    <button class="btn btn-sm btn-success"
+                                        wire:click="reimprimirVenta({{ $ventaSeleccionada->id }})"
+                                        title="Reimprimir ticket y comanda">
+                                        <i class="fa-solid fa-print me-1"></i>Reimprimir
+                                    </button>
+                                @endif
                                 @if ($ventaSeleccionada->estado === 'Completo' && $puedeEliminar)
                                     <button class="btn btn-sm btn-danger"
                                         wire:click="$dispatch('confirm-delete', { id: {{ $ventaSeleccionada->id }}, message: '¿Está seguro de eliminar la venta #{{ $ventaSeleccionada->numero_venta }}?' })"
@@ -345,58 +352,30 @@
                 });
             });
 
-            // === IMPRESIÓN DIRECTA VÍA LICOPOS PRINTER (localhost:1013) ===
-            const LICOPOS_URL = 'http://localhost:1013';
-
-            async function imprimirTicketLocal(ventaId) {
-                try {
-                    const response = await fetch(`${LICOPOS_URL}/venta/${ventaId}`, {
-                        method: 'GET',
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    // Consumir respuesta
-                    await response.text();
-                    console.log('Ticket impreso correctamente por localhost:1013');
-
-                    // Mostrar notificación de éxito
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire({
-                            toast: true,
-                            position: 'top-end',
-                            icon: 'success',
-                            title: 'Ticket impreso',
-                            showConfirmButton: false,
-                            timer: 2000
-                        });
-                    }
-                    return true; // Éxito - no abrir PDF
-                } catch (e) {
-                    console.warn('MiSocio Printer no disponible, generando PDF:', e.message);
-                    // Fallback: Generar PDF y abrir para imprimir (compatible con móviles)
-                    const printWindow = window.open(`/ticket/venta/${ventaId}`, '_blank');
-                    if (printWindow) {
-                        // Intentar imprimir automáticamente cuando el PDF cargue
-                        printWindow.onload = function() {
-                            setTimeout(() => {
-                                try {
-                                    printWindow.print();
-                                } catch (err) {
-                                    console.warn('No se pudo imprimir automáticamente:', err);
-                                }
-                            }, 500);
-                        };
-                    }
-                }
+            // === IMPRESIÓN VÍA PRINT-AGENT (print:// protocol) ===
+            function launchProtocol(url, delay = 0) {
+                const a = document.createElement('a');
+                a.href = url;
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                setTimeout(() => { a.click(); document.body.removeChild(a); }, delay);
             }
 
-            // Escuchar evento de Livewire para imprimir
-            $wire.on('abrir-ticket', (data) => {
-                const info = data[0] || data;
-                imprimirTicketLocal(info.ventaId);
+            $wire.on('imprimir-venta', (data) => {
+                const d          = data[0] || data;
+                const ticketUrl  = d.ticketUrl  ?? null;
+                const comandaUrl = d.comandaUrl ?? null;
+                if (!d.ventaId) return;
+
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+                if (!isMobile && ticketUrl) {
+                    launchProtocol(ticketUrl);
+                    if (comandaUrl) launchProtocol(comandaUrl, 600);
+                } else if (isMobile) {
+                    window.open(`/ticket/cliente/${d.ventaId}?nocomanda=1`, '_blank');
+                    if (comandaUrl) setTimeout(() => window.open(`/ticket/comanda/${d.ventaId}`, '_blank'), 10000);
+                }
             });
         </script>
     @endscript

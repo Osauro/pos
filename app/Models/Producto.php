@@ -24,7 +24,7 @@ class Producto extends Model
         if ($this->imagen) {
             return asset('storage/' . $this->imagen);
         }
-        return asset('assets/images/default-product.png');
+        return asset('assets/images/product-placeholder.svg');
     }
 
     public function ventaItems()

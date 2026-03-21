@@ -341,16 +341,24 @@ class Ventas extends Component
         $this->cerrarModal();
     }
 
-    public function imprimirTicket($id)
+    public function reimprimirVenta($id)
     {
-        // TODO: Implementar impresión de ticket
-        $this->showSuccessNotification('Función de impresión en desarrollo');
-    }
+        $venta = Venta::with(['items.producto', 'turno.encargado', 'usuario'])->find($id);
 
-    public function imprimirComanda($id)
-    {
-        // TODO: Implementar impresión de comanda
-        $this->showSuccessNotification('Función de impresión de comanda en desarrollo');
+        if (!$venta || $venta->estado !== 'Completo') {
+            $this->showErrorNotification('Solo se pueden reimprimir ventas completadas.');
+            return;
+        }
+
+        $svc = app(\App\Services\EscposPrintService::class);
+        $ticketUrl  = $svc->ticketUrl($venta);
+        $comandaUrl = $svc->comandaUrl($venta);
+
+        $this->dispatch('imprimir-venta',
+            ventaId:    $venta->id,
+            ticketUrl:  $ticketUrl,
+            comandaUrl: $comandaUrl,
+        );
     }
 
     public function generarPDF($id)
