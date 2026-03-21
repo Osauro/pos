@@ -146,16 +146,8 @@ func decryptPayload(hexKey, encoded string) ([]byte, error) {
 	if err != nil || len(keyBytes) != 32 {
 		return nil, fmt.Errorf("clave inválida")
 	}
-	// base64url → bytes
-	b64 := strings.ReplaceAll(encoded, "-", "+")
-	b64 = strings.ReplaceAll(b64, "_", "/")
-	switch len(b64) % 4 {
-	case 2:
-		b64 += "=="
-	case 3:
-		b64 += "="
-	}
-	raw, err := base64.StdEncoding.DecodeString(b64)
+	// base64url sin padding → bytes (RawURLEncoding maneja -_ y sin =)
+	raw, err := base64.RawURLEncoding.DecodeString(encoded)
 	if err != nil {
 		return nil, fmt.Errorf("base64: %w", err)
 	}
@@ -373,8 +365,9 @@ func handlePrintURL(rawURL string) {
 		return
 	}
 	payload := m[1]
-	// Limpiar caracteres de control que el shell pueda agregar al final
-	payload = strings.TrimRight(payload, "\r\n\t ")
+	// Limpiar caracteres de control y / final que Chrome agrega al normalizar
+	// la URL (trata el payload como "host" y añade slash: print://PAYLOAD/)
+	payload = strings.TrimRight(payload, "/\r\n\t ")
 	logMsg(fmt.Sprintf("payload len=%d primeros40=%s", len(payload), payload[:min(40, len(payload))]))
 
 	// Eliminar prefijo de versión antigua (ej: TpV_v1_) si está presente
