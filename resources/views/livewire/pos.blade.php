@@ -311,6 +311,17 @@
     // 300px = exactamente 80mm a 96dpi
     const WIN_OPTS = 'toolbar=0,scrollbars=0,location=0,statusbar=0,menubar=0,resizable=0,width=300,height=700';
 
+    // Dispara una URL de protocolo custom (print://) via <a>.click()
+    // Chrome solo permite window.location.href una vez por gesto;
+    // el click en un <a> no tiene esa restricción.
+    function launchProtocol(url, delay = 0) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        setTimeout(() => { a.click(); document.body.removeChild(a); }, delay);
+    }
+
     $wire.on('imprimir-venta', (data) => {
         const d          = data[0] || data;
         const ventaId    = d.ventaId;
@@ -321,12 +332,9 @@
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
         if (!isMobile && ticketUrl) {
-            // ── Modo exe directo: datos encriptados en la URL ────────────────
-            // print-agent.exe desencripta y manda ESC/POS sin diálogo
-            window.location.href = ticketUrl;
-            if (comandaUrl) {
-                setTimeout(() => { window.location.href = comandaUrl; }, 800);
-            }
+            // ── Modo exe directo: ambos sin restricción de gesto ────────────
+            launchProtocol(ticketUrl);
+            if (comandaUrl) launchProtocol(comandaUrl, 600);
         } else if (isMobile) {
             // ── Móvil: pestaña completa (sin WIN_OPTS) ───────────────────────
             window.open(`/ticket/cliente/${ventaId}?nocomanda=1`, '_blank');
