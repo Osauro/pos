@@ -11,12 +11,14 @@ class Producto extends Model
         'imagen',
         'precio',
         'tipo',
-        'estado'
+        'estado',
+        'total_vendido',
     ];
 
     protected $casts = [
-        'precio' => 'decimal:2',
-        'estado' => 'boolean'
+        'precio'        => 'decimal:2',
+        'estado'        => 'boolean',
+        'total_vendido' => 'integer',
     ];
 
     public function getPhotoUrlAttribute()

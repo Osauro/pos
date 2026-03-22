@@ -14,6 +14,20 @@
                     </button>
                 @endforeach
             </div>
+            <div class="btn-group flex-shrink-0" role="group" title="Ordenar productos">
+                <button type="button"
+                        wire:click="setOrdenProductos('nombre')"
+                        class="btn btn-sm {{ $orden_productos === 'nombre' ? 'btn-secondary' : 'btn-outline-secondary' }}"
+                        title="Ordenar por nombre">
+                    <i class="fa-solid fa-arrow-down-a-z"></i>
+                </button>
+                <button type="button"
+                        wire:click="setOrdenProductos('popularidad')"
+                        class="btn btn-sm {{ $orden_productos === 'popularidad' ? 'btn-warning' : 'btn-outline-secondary' }}"
+                        title="Más vendidos primero">
+                    <i class="fa-solid fa-fire"></i>
+                </button>
+            </div>
         </div>
     </div>
 

@@ -21,6 +21,7 @@ class Pos extends Component
     public $carrito = [];      // Espejo en memoria del carrito para renders rÃ¡pidos
     public $total = 0;
     public $tipo_filtro = 'Platos';
+    public string $orden_productos = 'nombre';
     public $mostrar_carrito = false;
     public $producto_pendiente_id = null;
     public $mostrar_selector = false;
@@ -131,10 +132,18 @@ class Pos extends Component
     {
         $productos = Producto::where('estado', true)
             ->where('tipo', $this->tipo_filtro)
-            ->orderBy('nombre')
+            ->when($this->orden_productos === 'popularidad',
+                fn($q) => $q->orderByDesc('total_vendido')->orderBy('nombre'),
+                fn($q) => $q->orderBy('nombre')
+            )
             ->get();
 
         return view('livewire.pos', compact('productos'));
+    }
+
+    public function setOrdenProductos(string $orden): void
+    {
+        $this->orden_productos = $orden;
     }
 
     // â”€â”€â”€ Agregar al carrito â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -473,6 +482,12 @@ class Pos extends Component
             }
 
             DB::commit();
+
+            // Incrementar contador de popularidad de cada producto vendido
+            foreach ($this->carrito as $item) {
+                Producto::where('id', $item['producto_id'])
+                    ->increment('total_vendido', $item['cantidad']);
+            }
 
             $this->showSuccessNotification('Venta completada. Total: Bs. ' . number_format($this->total, 2));
 
