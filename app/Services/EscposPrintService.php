@@ -306,6 +306,6 @@ class EscposPrintService
         if ($fid > 0) $partes[] = "{$fid}F";
         if ($mix > 0) $partes[] = "{$mix}M";
 
-        return implode('-', $partes);
+        return implode(' - ', $partes);
     }
 }
