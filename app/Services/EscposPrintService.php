@@ -92,6 +92,67 @@ class EscposPrintService
         );
     }
 
+    /**
+     * Pluraliza un nombre de producto en español según la cantidad.
+     *
+     * Reglas:
+     *  1. Si hay preposición (de, sin, con…) → pluralizar solo lo anterior.
+     *  2. Si hay token con dígito (190ml, 500cc…) → pluralizar solo la
+     *     última palabra alfabética antes del dígito.
+     *  3. Sin preposición ni dígito → pluralizar todas las palabras.
+     */
+    private function pluralizarNombre(string $nombre, int $cantidad): string
+    {
+        if ($cantidad <= 1) return $nombre;
+
+        $preposiciones = ['de', 'del', 'sin', 'con', 'a', 'al', 'en', 'para', 'por', 'y'];
+        $tokens = explode(' ', $nombre);
+
+        $stopIdx = null;
+        $digitIdx = null;
+        foreach ($tokens as $i => $token) {
+            if ($stopIdx === null && in_array(mb_strtolower($token), $preposiciones)) {
+                $stopIdx = $i;
+                break;
+            }
+            if ($digitIdx === null && preg_match('/\d/', $token)) {
+                $digitIdx = $i;
+                break;
+            }
+        }
+
+        if ($stopIdx !== null) {
+            // Pluralizar solo las palabras antes de la preposición
+            for ($i = 0; $i < $stopIdx; $i++) {
+                $tokens[$i] = $this->pluralES($tokens[$i]);
+            }
+        } elseif ($digitIdx !== null && $digitIdx > 0) {
+            // Pluralizar solo la última palabra alfabética antes del token con dígito
+            $tokens[$digitIdx - 1] = $this->pluralES($tokens[$digitIdx - 1]);
+        } else {
+            // Sin stoppers: pluralizar todas las palabras
+            foreach ($tokens as $i => $token) {
+                $tokens[$i] = $this->pluralES($token);
+            }
+        }
+
+        return implode(' ', $tokens);
+    }
+
+    /** Aplica las reglas básicas del plural en español. */
+    private function pluralES(string $word): string
+    {
+        if (empty($word)) return $word;
+        $ult = mb_strtolower(mb_substr($word, -1));
+        if ($ult === 'z') {
+            return mb_substr($word, 0, -1) . 'ces';
+        }
+        if (in_array($ult, ['a', 'e', 'i', 'o', 'u'])) {
+            return $word . 's';
+        }
+        return $word . 'es';
+    }
+
     // ──────────────────────────────────────────────────────────────────
     // Generación de bytes ESC/POS con mike42
     // ──────────────────────────────────────────────────────────────────
@@ -132,7 +193,8 @@ class EscposPrintService
         $printer->setJustification(Printer::JUSTIFY_LEFT);
 
         foreach ($items as $item) {
-            $izq = "{$item->cantidad} {$item->producto->nombre}";
+            $nombre = $this->pluralizarNombre($item->producto->nombre, $item->cantidad);
+            $izq = "{$item->cantidad} {$nombre}";
             $der = number_format((float) $item->subtotal, 2);
             $printer->text($this->columnasDots($izq, $der, $cols) . "\n");
         }
