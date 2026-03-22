@@ -2,7 +2,7 @@
     {{-- Barra de título y categorías --}}
     <div class="module-sticky-header">
         <div class="d-flex justify-content-between align-items-center gap-2">
-            <h5 class="mb-0 fw-bold d-none d-md-block flex-shrink-0">
+            <h5 class="mb-0 fw-bold d-none d-lg-block flex-shrink-0">
                 <i class="fa-solid fa-cash-register me-2 text-primary"></i>Punto de Venta
             </h5>
             <div class="btn-group pos-cat-group" role="group">
@@ -22,7 +22,7 @@
         .page-body         { padding: 0 !important; overflow: hidden !important; }
         .page-body-wrapper { overflow: hidden !important; }
         html, body         { overflow: hidden !important; height: 100% !important; }
-        @media (max-width: 767.98px) {
+        @media (max-width: 991.98px) {
             .pos-cat-group { width: 100%; }
             .pos-cat-group .btn { flex: 1 1 auto; }
         }
@@ -34,7 +34,7 @@
     <div class="row g-0 pos-layout">
 
         {{-- ══ PANEL CATÁLOGO (col-md-9) ══ --}}
-        <div class="col-12 col-md-9 pos-catalog {{ $mostrar_carrito ? 'd-none d-md-block' : '' }}">
+        <div class="col-12 col-lg-9 pos-catalog {{ $mostrar_carrito ? 'd-none d-lg-block' : '' }}">
 
             {{-- Grid de productos --}}
             <div class="pos-products-wrap p-2 bg-light">
@@ -90,7 +90,7 @@
         </div>
 
         {{-- ══ PANEL CARRITO (col-md-3) ══ --}}
-        <div class="col-12 col-md-3 pos-cart border-start {{ !$mostrar_carrito ? 'd-none d-md-block' : '' }}">
+        <div class="col-12 col-lg-3 pos-cart border-start {{ !$mostrar_carrito ? 'd-none d-lg-block' : '' }}">
 
             {{-- Header carrito --}}
             <div class="pos-cart-header px-3 py-2 bg-white border-bottom">
@@ -219,7 +219,7 @@
     </div>{{-- /row g-0 pos-layout --}}
 
     {{-- ══ BOTTOM BAR (solo móvil) ══ --}}
-    <div class="pos-bottom-bar d-md-none">
+    <div class="pos-bottom-bar d-lg-none">
         <button wire:click="cancelarVenta"
                 class="pos-act pos-act--danger"
                 {{ empty($carrito) ? 'disabled' : '' }}>
@@ -329,7 +329,9 @@
         const comandaUrl = d.comandaUrl ?? null;
         if (!ventaId) return;
 
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        // Tablet/móvil: user-agent móvil O pantalla < 992px (breakpoint lg)
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+                      || window.innerWidth < 992;
 
         if (!isMobile && ticketUrl) {
             // ── Modo exe directo: ambos sin restricción de gesto ────────────
