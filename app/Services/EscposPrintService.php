@@ -64,25 +64,25 @@ class EscposPrintService
         $items   = $venta->items->filter(fn($i) => $i->producto)->values();
         $width   = (int) config('printer.width', 80);
         $negocio = config('printer.negocio', 'Mi Negocio');
-        $cols    = match($width) { 58 => 32, 110 => 56, default => 42 };
+        $cols    = match($width) { 58 => 32, 110 => 56, default => 48 };
 
         $connector = new DummyPrintConnector();
         $printer   = new Printer($connector);
 
-        // Cabecera
+        // Cabecera: nombre empresa (Go prepone el logo PNG si existe en C:\Pos\logo.png)
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
         $printer->setTextSize(2, 2);
         $printer->text(mb_strtoupper($negocio) . "\n");
         $printer->setTextSize(1, 1);
         $printer->setEmphasis(false);
-        $printer->text($this->separador($cols, '=') . "\n");
 
+        // Número de venta + línea en blanco
         $printer->setEmphasis(true);
-        $printer->text("VENTA: {$venta->numero_venta}\n");
+        $printer->text("VENTA #{$venta->numero_venta}\n\n");
         $printer->setEmphasis(false);
 
-        // Info
+        // Fecha / Hora / Cajero
         $printer->setJustification(Printer::JUSTIFY_LEFT);
         $fecha = $venta->fecha_hora?->format('d/m/Y') ?? now()->format('d/m/Y');
         $hora  = $venta->fecha_hora?->format('H:i')   ?? now()->format('H:i');
@@ -96,32 +96,26 @@ class EscposPrintService
         $printer->text($this->separador($cols) . "\n");
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
-        $printer->text("- D E T A L L E -\n");
+        $printer->text("D E T A L L E\n");
         $printer->setEmphasis(false);
         $printer->text($this->separador($cols) . "\n");
         $printer->setJustification(Printer::JUSTIFY_LEFT);
 
         foreach ($items as $item) {
-            $nombreLinea = "{$item->cantidad} {$item->producto->nombre}";
-            $precio      = number_format((float) $item->subtotal, 2);
-            $printer->text($this->columnas($nombreLinea, $precio, $cols) . "\n");
+            $izq = "{$item->cantidad} {$item->producto->nombre}";
+            $der = number_format((float) $item->subtotal, 2);
+            $printer->text($this->columnasDots($izq, $der, $cols) . "\n");
         }
 
         // Total
-        $printer->text($this->separador($cols, '=') . "\n");
+        $printer->text($this->separador($cols) . "\n");
         $printer->setEmphasis(true);
         $printer->setTextSize(1, 2);
         $total = "Bs. " . number_format((float) $venta->total, 2);
         $printer->text($this->columnas("TOTAL:", $total, $cols) . "\n");
         $printer->setTextSize(1, 1);
         $printer->setEmphasis(false);
-        $printer->text($this->separador($cols, '=') . "\n");
 
-        // Pie
-        $printer->setJustification(Printer::JUSTIFY_CENTER);
-        $printer->setEmphasis(true);
-        $printer->text("GRACIAS POR SU COMPRA\n");
-        $printer->setEmphasis(false);
         $printer->feed(4);
         $printer->cut(Printer::CUT_PARTIAL);
 
@@ -134,39 +128,31 @@ class EscposPrintService
     private function buildComandaBytes(Venta $venta, $items): string
     {
         $width = (int) config('printer.width', 80);
-        $cols  = match($width) { 58 => 32, 110 => 56, default => 42 };
+        $cols  = match($width) { 58 => 32, 110 => 56, default => 48 };
 
         $connector = new DummyPrintConnector();
         $printer   = new Printer($connector);
 
-        $printer->setJustification(Printer::JUSTIFY_CENTER);
-        $printer->setEmphasis(true);
-        $printer->setTextSize(2, 2);
-        $printer->text("** COMANDA **\n");
-        $printer->setTextSize(1, 1);
-        $printer->setEmphasis(false);
-        $printer->text($this->separador($cols, '=') . "\n");
-
+        // Cabecera: solo número de venta, sin logo ni nombre de empresa
         $printer->setJustification(Printer::JUSTIFY_LEFT);
         $printer->setEmphasis(true);
-        $printer->text("VENTA: {$venta->numero_venta}\n");
+        $printer->setTextSize(1, 2);
+        $printer->text("Venta #{$venta->numero_venta}\n");
+        $printer->setTextSize(1, 1);
         $printer->setEmphasis(false);
 
-        $fecha = $venta->fecha_hora?->format('d/m/Y H:i') ?? now()->format('d/m/Y H:i');
-        $printer->text("Fecha: {$fecha}\n");
-        $printer->text($this->separador($cols) . "\n");
-
+        // Items: cantidad nombreCorto....detalle (1A - 2F - 3M)
         foreach ($items as $item) {
-            $printer->setTextSize(1, 2);
             $nombre  = $this->nombreCorto($item);
             $detalle = $this->buildDetalle($item);
-            $linea   = " {$item->cantidad} x {$nombre}";
-            if ($detalle) $linea .= " ({$detalle})";
-            $printer->text($linea . "\n");
-            $printer->setTextSize(1, 1);
+            $izq     = "{$item->cantidad} {$nombre}";
+            if ($detalle) {
+                $printer->text($this->columnasDots($izq, $detalle, $cols) . "\n");
+            } else {
+                $printer->text("{$izq}\n");
+            }
         }
 
-        $printer->text($this->separador($cols) . "\n");
         $printer->feed(4);
         $printer->cut(Printer::CUT_PARTIAL);
 
@@ -226,6 +212,12 @@ class EscposPrintService
         return $izq . str_repeat(' ', max(1, $espacios)) . $der;
     }
 
+    private function columnasDots(string $izq, string $der, int $cols): string
+    {
+        $puntos = $cols - mb_strlen($izq) - mb_strlen($der);
+        return $izq . str_repeat('.', max(1, $puntos)) . $der;
+    }
+
     private function nombreCorto($item): string
     {
         $nombre = $item->producto->nombre;
@@ -253,10 +245,10 @@ class EscposPrintService
         $mix    = $item->detalle['mixto'] ?? 0;
         $partes = [];
 
-        if ($arr > 0) $partes[] = "A:{$arr}";
-        if ($fid > 0) $partes[] = "F:{$fid}";
-        if ($mix > 0) $partes[] = "M:{$mix}";
+        if ($arr > 0) $partes[] = "{$arr}A";
+        if ($fid > 0) $partes[] = "{$fid}F";
+        if ($mix > 0) $partes[] = "{$mix}M";
 
-        return implode(' ', $partes);
+        return implode(' - ', $partes);
     }
 }
