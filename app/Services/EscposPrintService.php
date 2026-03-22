@@ -64,22 +64,10 @@ class EscposPrintService
     {
         $items   = $venta->items->filter(fn($i) => $i->producto)->values();
         $width   = (int) config('printer.width', 80);
-        $negocio = config('printer.negocio', 'Mi Negocio');
-        $hasLogo = config('printer.logo', false);
         $cols    = match($width) { 58 => 32, 110 => 56, default => 48 };
 
         $connector = new DummyPrintConnector();
         $printer   = new Printer($connector);
-
-        // Nombre empresa solo si NO hay logo (el logo ya lleva el branding)
-        if (!$hasLogo) {
-            $printer->setJustification(Printer::JUSTIFY_CENTER);
-            $printer->setEmphasis(true);
-            $printer->setTextSize(2, 2);
-            $printer->text(mb_strtoupper($negocio) . "\n");
-            $printer->setTextSize(1, 1);
-            $printer->setEmphasis(false);
-        }
 
         // Número de venta en grande (salto antes y después)
         $printer->setJustification(Printer::JUSTIFY_CENTER);
@@ -180,8 +168,8 @@ class EscposPrintService
         $bytes = $connector->getData();
         $printer->close();
 
-        // Byte 0x01 = indicar a Go que SÍ agregue el logo local
-        return chr(1) . $bytes;
+        // Byte 0x00 = indicar a Go que NO agregue el logo local
+        return chr(0) . $bytes;
     }
 
     // ──────────────────────────────────────────────────────────────────
