@@ -230,10 +230,12 @@ class EscposPrintService
         $printer->setEmphasis(true);
         $printer->text("\nGRACIAS POR SU COMPRA\n");
         $printer->setEmphasis(false);
-        $encargado = $venta->turno->encargado;
-        $printer->text("Encargado: {$encargado->nombre}\n");
-        if (!empty($encargado->celular)) {
-            $printer->text("Celular: {$encargado->celular}\n");
+        if ($venta->turno && $venta->turno->encargado) {
+            $encargado = $venta->turno->encargado;
+            $printer->text("Encargado: {$encargado->nombre}\n");
+            if (!empty($encargado->celular)) {
+                $printer->text("Celular: {$encargado->celular}\n");
+            }
         }
 
         $printer->feed(4);

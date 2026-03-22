@@ -336,16 +336,15 @@
         if (!isAndroid && printUrl) {
             // ── ESC/POS directo: ticket + comanda en un solo print:// ─────────
             launchProtocol(printUrl);
-        } else if (isAndroid || !printUrl) {
-            // ── HTML fallback: ticket y/o comanda en una sola ventana ─────────
-            // Se evita abrir múltiples ventanas (bloqueadas por popup-blocker).
-            if (autoTicket && autoComanda) {
-                // Ticket + comanda en la misma página (segunda hoja)
-                window.open(`/ticket/cliente/${ventaId}`, '_blank');
-            } else if (autoTicket) {
-                window.open(`/ticket/cliente/${ventaId}?nocomanda=1`, '_blank');
-            } else if (autoComanda) {
-                window.open(`/ticket/comanda/${ventaId}`, '_blank');
+        } else {
+            // ── HTML fallback (Android o sin agente): ventanas separadas ─────
+            if (autoTicket) {
+                window.open(`/ticket/cliente/${ventaId}${autoComanda ? '' : '?nocomanda=1'}`, '_blank');
+            }
+            if (autoComanda) {
+                setTimeout(() => {
+                    window.open(`/ticket/comanda/${ventaId}`, '_blank');
+                }, autoTicket ? 10000 : 0);
             }
         }
     });
