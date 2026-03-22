@@ -175,21 +175,21 @@ class EscposPrintService
         $connector = new DummyPrintConnector();
         $printer   = new Printer($connector);
 
-        // Cabecera: Venta #{} centrado en doble tamaño
+        // Cabecera: VENTA #{} centrado en doble tamaño
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
         $printer->setTextSize(2, 2);
-        $printer->text("Venta #{$venta->numero_venta}\n\n");
+        $printer->text("VENTA #{$venta->numero_venta}\n\n");
         $printer->setTextSize(1, 1);
         $printer->setEmphasis(false);
 
-        // Items: texto doble (2x2) con puntos hasta el detalle
+        // Items: texto doble ancho, altura normal (2x1) con puntos hasta el detalle
         $printer->setJustification(Printer::JUSTIFY_LEFT);
         foreach ($items as $item) {
             $nombre  = $this->nombreCorto($item);
             $detalle = $this->buildDetalle($item);
             $izq     = "{$item->cantidad} {$nombre}";
-            $printer->setTextSize(2, 2);
+            $printer->setTextSize(2, 1);
             if ($detalle) {
                 $printer->text($this->columnasDotsTrunc($izq, $detalle, $colsDobl) . "\n");
             } else {
@@ -288,7 +288,7 @@ class EscposPrintService
         }
 
         $sufijo = strcasecmp($cad2, 'sin huevo') === 0 ? ' S/H' : '';
-        return strtoupper($cad1 . $sufijo);
+        return $cad1 . $sufijo;
     }
 
     private function buildDetalle($item): string
