@@ -25,6 +25,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -415,10 +416,72 @@ func handlePrintURL(rawURL string) {
 	}
 	logMsg(fmt.Sprintf("ESC/POS bytes: %d", len(escData)))
 
-	// Primer byte = flag de logo (protocolo interno PHP↔Go):
-	//   0x01 → ticket: SÍ preponer logo si existe en C:\Pos\logo.png
+	// Primer byte = flag de protocolo interno PHP↔Go:
+	//   0x01 → ticket: SÍ preponer logo
 	//   0x00 → comanda: NO preponer logo
-	//   otro → legacy sin flag, comportamiento por defecto (con logo)
+	//   0x02 → combinado: ticket + comanda en un solo payload
+	//          formato: chr(2) + uint32_BE(len_ticket) + ticket_bytes + comanda_bytes
+	//   otro → legacy sin flag (con logo)
+
+	if len(escData) > 0 && escData[0] == 2 {
+		// ── Modo combinado: imprimir ticket y luego comanda ──────────────
+		if len(escData) < 5 {
+			logMsg("Payload combinado demasiado corto")
+			return
+		}
+		ticketLen := int(escData[1])<<24 | int(escData[2])<<16 | int(escData[3])<<8 | int(escData[4])
+		rest := escData[5:]
+		if ticketLen > len(rest) {
+			logMsg(fmt.Sprintf("ticketLen=%d > rest=%d", ticketLen, len(rest)))
+			return
+		}
+		ticketDoc  := rest[:ticketLen]
+		comandaDoc := rest[ticketLen:]
+
+		// Imprimir ticket (con logo si su flag = 0x01)
+		ticketData := ticketDoc
+		if len(ticketData) > 0 && (ticketData[0] == 0 || ticketData[0] == 1) {
+			if ticketData[0] == 1 {
+				if logoBytes := logoESCPOS(cfg); len(logoBytes) > 0 {
+					ticketData = append(logoBytes, ticketData[1:]...)
+				} else {
+					ticketData = ticketData[1:]
+				}
+			} else {
+				ticketData = ticketData[1:]
+			}
+		}
+		logMsg(fmt.Sprintf("Combinado: ticket=%d bytes, comanda=%d bytes", len(ticketData), len(comandaDoc)))
+		if err := printRaw(cfg.PrinterName, ticketData); err != nil {
+			logMsg("Error imprimiendo ticket: " + err.Error())
+		} else {
+			logMsg("Ticket impreso OK")
+		}
+
+		// Imprimir comanda (con delay para que el spooler procese el ticket)
+		if len(comandaDoc) > 0 {
+			time.Sleep(800 * time.Millisecond)
+			comandaData := comandaDoc
+			if len(comandaData) > 0 && (comandaData[0] == 0 || comandaData[0] == 1) {
+				if comandaData[0] == 1 {
+					if logoBytes := logoESCPOS(cfg); len(logoBytes) > 0 {
+						comandaData = append(logoBytes, comandaData[1:]...)
+					} else {
+						comandaData = comandaData[1:]
+					}
+				} else {
+					comandaData = comandaData[1:]
+				}
+			}
+			if err := printRaw(cfg.PrinterName, comandaData); err != nil {
+				logMsg("Error imprimiendo comanda: " + err.Error())
+			} else {
+				logMsg("Comanda impresa OK")
+			}
+		}
+		return
+	}
+
 	useLogo := true
 	if len(escData) > 0 && (escData[0] == 0 || escData[0] == 1) {
 		useLogo = escData[0] == 1

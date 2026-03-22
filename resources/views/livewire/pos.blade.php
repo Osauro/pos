@@ -323,20 +323,18 @@
     }
 
     $wire.on('imprimir-venta', (data) => {
-        const d          = data[0] || data;
-        const ventaId    = d.ventaId;
-        const ticketUrl  = d.ticketUrl  ?? null;   // print://{encryptedPayload}
-        const comandaUrl = d.comandaUrl ?? null;
+        const d        = data[0] || data;
+        const ventaId  = d.ventaId;
+        const printUrl = d.printUrl ?? null;
         if (!ventaId) return;
 
         // Solo Android usa fallback HTML/PDF.
         // Windows, iOS, iPad, etc. usan siempre print:// (ESC/POS directo).
         const isAndroid = /Android/i.test(navigator.userAgent);
 
-        if (!isAndroid && ticketUrl) {
-            // ── ESC/POS directo (todas las PCs y tablets no-Android) ──────────
-            launchProtocol(ticketUrl);
-            if (comandaUrl) launchProtocol(comandaUrl, 1800);
+        if (!isAndroid && printUrl) {
+            // ── ESC/POS directo: ticket + comanda en un solo print:// ─────────
+            launchProtocol(printUrl);
         } else if (isAndroid) {
             // ── Android: fallback HTML con autoprint ──────────────────────────
             window.open(`/ticket/cliente/${ventaId}?nocomanda=1`, '_blank');
@@ -344,7 +342,7 @@
                 window.open(`/ticket/comanda/${ventaId}`, '_blank');
             }, 10000);
         } else {
-            // ── Sin ticketUrl (escpos desactivado): ventana impresora fallback ─
+            // ── Sin printUrl (escpos desactivado): ventana impresora fallback ──
             window.open(`/ticket/cliente/${ventaId}`, '_blank', WIN_OPTS);
         }
     });

@@ -362,20 +362,18 @@
             }
 
             $wire.on('imprimir-venta', (data) => {
-                const d          = data[0] || data;
-                const ticketUrl  = d.ticketUrl  ?? null;
-                const comandaUrl = d.comandaUrl ?? null;
+                const d        = data[0] || data;
+                const printUrl = d.printUrl ?? null;
                 if (!d.ventaId) return;
 
                 // Solo Android usa fallback HTML/PDF.
                 const isAndroid = /Android/i.test(navigator.userAgent);
 
-                if (!isAndroid && ticketUrl) {
-                    launchProtocol(ticketUrl);
-                    if (comandaUrl) launchProtocol(comandaUrl, 600);
+                if (!isAndroid && printUrl) {
+                    launchProtocol(printUrl);
                 } else if (isAndroid) {
                     window.open(`/ticket/cliente/${d.ventaId}?nocomanda=1`, '_blank');
-                    if (comandaUrl) setTimeout(() => window.open(`/ticket/comanda/${d.ventaId}`, '_blank'), 10000);
+                    if (printUrl === null) setTimeout(() => window.open(`/ticket/comanda/${d.ventaId}`, '_blank'), 10000);
                 }
             });
         </script>

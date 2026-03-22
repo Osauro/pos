@@ -350,14 +350,12 @@ class Ventas extends Component
             return;
         }
 
-        $svc = app(\App\Services\EscposPrintService::class);
-        $ticketUrl  = $svc->ticketUrl($venta);
-        $comandaUrl = $svc->comandaUrl($venta);
+        $svc      = app(\App\Services\EscposPrintService::class);
+        $printUrl = $svc->combinedUrl($venta);
 
         $this->dispatch('imprimir-venta',
-            ventaId:    $venta->id,
-            ticketUrl:  $ticketUrl,
-            comandaUrl: $comandaUrl,
+            ventaId:  $venta->id,
+            printUrl: $printUrl,
         );
     }
 

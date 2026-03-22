@@ -492,10 +492,18 @@ class Pos extends Component
                     $ventaParaImprimir = \App\Models\Venta::with(['items.producto', 'turno.encargado', 'usuario'])
                         ->find($ventaCompletadaId);
                     $svc = app(\App\Services\EscposPrintService::class);
+                    $autoTicket  = config('printer.auto_ticket');
+                    $autoComanda = config('printer.auto_comanda');
+                    if ($autoTicket && $autoComanda) {
+                        $printUrl = $svc->combinedUrl($ventaParaImprimir);
+                    } elseif ($autoTicket) {
+                        $printUrl = $svc->ticketUrl($ventaParaImprimir);
+                    } else {
+                        $printUrl = $svc->comandaUrl($ventaParaImprimir);
+                    }
                     $this->dispatch('imprimir-venta',
-                        ventaId:    $ventaCompletadaId,
-                        ticketUrl:  config('printer.auto_ticket')  ? $svc->ticketUrl($ventaParaImprimir)  : null,
-                        comandaUrl: config('printer.auto_comanda') ? $svc->comandaUrl($ventaParaImprimir) : null,
+                        ventaId:  $ventaCompletadaId,
+                        printUrl: $printUrl,
                     );
                 } else {
                     $this->dispatch('imprimir-venta', ventaId: $ventaCompletadaId);

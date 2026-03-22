@@ -40,6 +40,33 @@ class EscposPrintService
         }
     }
 
+    /**
+     * URL combinada ticket + comanda en un único print://.
+     * Protocolo: chr(2) + pack('N', len_ticket) + ticket_bytes + comanda_bytes
+     * Si no hay comanda, devuelve solo el ticketUrl.
+     */
+    public function combinedUrl(Venta $venta): ?string
+    {
+        try {
+            $ticketBytes = $this->buildTicketBytes($venta);
+
+            $items = $venta->items->filter(
+                fn($i) => $i->producto && $i->producto->tipo !== 'Refrescos'
+            );
+            if ($items->isEmpty()) {
+                return 'print://' . $this->encodePayload($ticketBytes);
+            }
+
+            $comandaBytes = $this->buildComandaBytes($venta, $items);
+            $ticketLen    = strlen($ticketBytes);
+            $combined     = chr(2) . pack('N', $ticketLen) . $ticketBytes . $comandaBytes;
+            return 'print://' . $this->encodePayload($combined);
+        } catch (\Throwable $e) {
+            \Log::error('EscposPrintService::combinedUrl ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            return null;
+        }
+    }
+
     public function comandaUrl(Venta $venta): ?string
     {
         try {
