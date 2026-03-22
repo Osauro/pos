@@ -54,8 +54,11 @@ class EscposPrintService
             );
             if ($items->isEmpty()) return null;
 
+            $porciones    = $venta->items->filter(
+                fn($i) => $i->producto && $i->producto->tipo === 'Porciones'
+            );
             $ticketBytes  = $this->buildTicketBytes($venta);
-            $comandaBytes = $this->buildComandaBytes($venta, $items);
+            $comandaBytes = $this->buildComandaBytes($venta, $items, $porciones);
             $ticketLen    = strlen($ticketBytes);
             $combined     = chr(2) . pack('N', $ticketLen) . $ticketBytes . $comandaBytes;
             return 'print://' . $this->encodePayload($combined);
@@ -73,7 +76,10 @@ class EscposPrintService
             );
             if ($items->isEmpty()) return null;
 
-            $bytes = $this->buildComandaBytes($venta, $items);
+            $porciones = $venta->items->filter(
+                fn($i) => $i->producto && $i->producto->tipo === 'Porciones'
+            );
+            $bytes = $this->buildComandaBytes($venta, $items, $porciones);
             return 'print://' . $this->encodePayload($bytes);
         } catch (\Throwable $e) {
             \Log::error('EscposPrintService::comandaUrl ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
@@ -228,7 +234,7 @@ class EscposPrintService
         return chr(1) . $bytes;
     }
 
-    private function buildComandaBytes(Venta $venta, $items): string
+    private function buildComandaBytes(Venta $venta, $items, $porciones = null): string
     {
         $width    = (int) config('printer.width', 80);
         $cols     = match($width) { 58 => 32, 110 => 56, default => 48 };
@@ -258,6 +264,24 @@ class EscposPrintService
                 $printer->text(mb_substr($izq, 0, $cols) . "\n");
             }
             $printer->setTextSize(1, 1);
+        }
+
+        // Sección PORCIONES (si las hay)
+        if ($porciones && $porciones->isNotEmpty()) {
+            $printer->setJustification(Printer::JUSTIFY_CENTER);
+            $printer->setEmphasis(true);
+            $printer->text("\n" . $this->separador($cols) . "\n");
+            $printer->text("P O R C I O N E S\n");
+            $printer->text($this->separador($cols) . "\n");
+            $printer->setEmphasis(false);
+            $printer->setJustification(Printer::JUSTIFY_LEFT);
+            foreach ($porciones as $item) {
+                $nombre = $this->pluralizarNombre($item->producto->nombre, $item->cantidad);
+                $izq    = "{$item->cantidad} {$nombre}";
+                $printer->setTextSize(1, 2);
+                $printer->text(mb_substr($izq, 0, $cols) . "\n");
+                $printer->setTextSize(1, 1);
+            }
         }
 
         $printer->feed(4);
