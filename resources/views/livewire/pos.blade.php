@@ -329,22 +329,22 @@
         const comandaUrl = d.comandaUrl ?? null;
         if (!ventaId) return;
 
-        // Tablet/móvil: user-agent móvil O pantalla < 992px (breakpoint lg)
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-                      || window.innerWidth < 992;
+        // Solo Android usa fallback HTML/PDF.
+        // Windows, iOS, iPad, etc. usan siempre print:// (ESC/POS directo).
+        const isAndroid = /Android/i.test(navigator.userAgent);
 
-        if (!isMobile && ticketUrl) {
-            // ── Modo exe directo: ambos sin restricción de gesto ────────────
+        if (!isAndroid && ticketUrl) {
+            // ── ESC/POS directo (todas las PCs y tablets no-Android) ──────────
             launchProtocol(ticketUrl);
             if (comandaUrl) launchProtocol(comandaUrl, 600);
-        } else if (isMobile) {
-            // ── Móvil: pestaña completa (sin WIN_OPTS) ───────────────────────
+        } else if (isAndroid) {
+            // ── Android: fallback HTML con autoprint ──────────────────────────
             window.open(`/ticket/cliente/${ventaId}?nocomanda=1`, '_blank');
             setTimeout(() => {
                 window.open(`/ticket/comanda/${ventaId}`, '_blank');
             }, 10000);
         } else {
-            // ── Escritorio: ventana pequeña estilo impresora (fallback) ──────
+            // ── Sin ticketUrl (escpos desactivado): ventana impresora fallback ─
             window.open(`/ticket/cliente/${ventaId}`, '_blank', WIN_OPTS);
         }
     });

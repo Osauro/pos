@@ -367,12 +367,13 @@
                 const comandaUrl = d.comandaUrl ?? null;
                 if (!d.ventaId) return;
 
-                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                // Solo Android usa fallback HTML/PDF.
+                const isAndroid = /Android/i.test(navigator.userAgent);
 
-                if (!isMobile && ticketUrl) {
+                if (!isAndroid && ticketUrl) {
                     launchProtocol(ticketUrl);
                     if (comandaUrl) launchProtocol(comandaUrl, 600);
-                } else if (isMobile) {
+                } else if (isAndroid) {
                     window.open(`/ticket/cliente/${d.ventaId}?nocomanda=1`, '_blank');
                     if (comandaUrl) setTimeout(() => window.open(`/ticket/comanda/${d.ventaId}`, '_blank'), 10000);
                 }
