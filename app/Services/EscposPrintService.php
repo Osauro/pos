@@ -88,12 +88,11 @@ class EscposPrintService
         $printer->setTextSize(1, 1);
         $printer->setEmphasis(false);
 
-        // Fecha / Hora / Cajero — alineados a la izquierda, sin padding
+        // Fecha/Hora en la misma línea, Cajero debajo
         $printer->setJustification(Printer::JUSTIFY_LEFT);
         $fecha = $venta->fecha_hora?->format('d/m/Y') ?? now()->format('d/m/Y');
         $hora  = $venta->fecha_hora?->format('H:i')   ?? now()->format('H:i');
-        $printer->text("Fecha: {$fecha}\n");
-        $printer->text("Hora: {$hora}\n");
+        $printer->text("Fecha: {$fecha}  {$hora}\n");
         if ($venta->usuario) {
             $printer->text("Cajero: {$venta->usuario->nombre}\n");
         }
