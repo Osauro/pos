@@ -328,7 +328,11 @@ func logoESCPOS(cfg Config) []byte {
 		srcY := bounds.Min.Y + y*srcH/dstH
 		for x := 0; x < dstW; x++ {
 			srcX := bounds.Min.X + x*srcW/dstW
-			r, g, b, _ := img.At(srcX, srcY).RGBA()
+			r, g, b, a := img.At(srcX, srcY).RGBA()
+			// Pixel transparente → fondo blanco (no imprimir)
+			if a < 0x8000 {
+				continue
+			}
 			// Luminancia ponderada (valores RGBA son de 16 bits)
 			lum := (299*r + 587*g + 114*b) / 1000
 			if lum < 32768 { // oscuro → imprimir punto
