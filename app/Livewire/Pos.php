@@ -21,7 +21,7 @@ class Pos extends Component
     public $carrito = [];      // Espejo en memoria del carrito para renders rÃ¡pidos
     public $total = 0;
     public $tipo_filtro = 'Platos';
-    public string $orden_productos = 'nombre';
+    public string $orden_productos = 'popularidad';
     public $mostrar_carrito = false;
     public $producto_pendiente_id = null;
     public $mostrar_selector = false;

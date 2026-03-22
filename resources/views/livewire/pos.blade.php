@@ -322,6 +322,21 @@
 
 @script
 <script>
+    // ── Persistir orden de productos en localStorage ─────────────────────────
+    const LS_ORDEN_KEY = 'pos_orden_productos';
+    const ordenGuardado = localStorage.getItem(LS_ORDEN_KEY);
+    if (ordenGuardado && ordenGuardado !== @js($orden_productos)) {
+        $wire.setOrdenProductos(ordenGuardado);
+    }
+    $wire.on('setOrdenProductos', () => {});
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[wire\\:click^="setOrdenProductos"]');
+        if (btn) {
+            const match = btn.getAttribute('wire:click').match(/setOrdenProductos\('(.*?)'\)/);
+            if (match) localStorage.setItem(LS_ORDEN_KEY, match[1]);
+        }
+    }, true);
+
     // 300px = exactamente 80mm a 96dpi
     const WIN_OPTS = 'toolbar=0,scrollbars=0,location=0,statusbar=0,menubar=0,resizable=0,width=300,height=700';
 
