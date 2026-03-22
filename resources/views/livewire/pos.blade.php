@@ -322,18 +322,15 @@
 
 @script
 <script>
-    // ── Persistir orden de productos en localStorage ─────────────────────────
-    const LS_ORDEN_KEY = 'pos_orden_productos';
-    const ordenGuardado = localStorage.getItem(LS_ORDEN_KEY);
-    if (ordenGuardado && ordenGuardado !== @js($orden_productos)) {
-        $wire.setOrdenProductos(ordenGuardado);
-    }
-    $wire.on('setOrdenProductos', () => {});
+    // ── Persistir orden de productos en cookie (leíble por PHP en mount) ───────
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('[wire\\:click^="setOrdenProductos"]');
         if (btn) {
             const match = btn.getAttribute('wire:click').match(/setOrdenProductos\('(.*?)'\)/);
-            if (match) localStorage.setItem(LS_ORDEN_KEY, match[1]);
+            if (match) {
+                // Cookie de 1 año, accesible por PHP
+                document.cookie = `pos_orden_productos=${match[1]};path=/;max-age=31536000;SameSite=Lax`;
+            }
         }
     }, true);
 

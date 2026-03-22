@@ -34,6 +34,7 @@ class Pos extends Component
     public function mount()
     {
         $this->verificarAccesoPOS();
+        $this->orden_productos = \Illuminate\Support\Facades\Cookie::get('pos_orden_productos', 'popularidad');
         $this->iniciarVentaPendiente();
     }
 
