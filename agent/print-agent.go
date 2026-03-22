@@ -411,12 +411,25 @@ func handlePrintURL(rawURL string) {
 	}
 	logMsg(fmt.Sprintf("ESC/POS bytes: %d", len(escData)))
 
-	// Preponer logo local si existe en C:\Pos\logo.png
-	if logoBytes := logoESCPOS(cfg); len(logoBytes) > 0 {
-		combined := make([]byte, len(logoBytes)+len(escData))
-		copy(combined, logoBytes)
-		copy(combined[len(logoBytes):], escData)
-		escData = combined
+	// Primer byte = flag de logo (protocolo interno PHP↔Go):
+	//   0x01 → ticket: SÍ preponer logo si existe en C:\Pos\logo.png
+	//   0x00 → comanda: NO preponer logo
+	//   otro → legacy sin flag, comportamiento por defecto (con logo)
+	useLogo := true
+	if len(escData) > 0 && (escData[0] == 0 || escData[0] == 1) {
+		useLogo = escData[0] == 1
+		escData = escData[1:]
+		logMsg(fmt.Sprintf("flag logo=%v", useLogo))
+	}
+
+	// Preponer logo local si existe y el flag lo indica
+	if useLogo {
+		if logoBytes := logoESCPOS(cfg); len(logoBytes) > 0 {
+			combined := make([]byte, len(logoBytes)+len(escData))
+			copy(combined, logoBytes)
+			copy(combined[len(logoBytes):], escData)
+			escData = combined
+		}
 	}
 
 	if cfg.PrinterName == "" {

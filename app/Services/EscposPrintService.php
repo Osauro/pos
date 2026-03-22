@@ -64,22 +64,28 @@ class EscposPrintService
         $items   = $venta->items->filter(fn($i) => $i->producto)->values();
         $width   = (int) config('printer.width', 80);
         $negocio = config('printer.negocio', 'Mi Negocio');
+        $hasLogo = config('printer.logo', false);
         $cols    = match($width) { 58 => 32, 110 => 56, default => 48 };
 
         $connector = new DummyPrintConnector();
         $printer   = new Printer($connector);
 
-        // Cabecera: nombre empresa (Go prepone el logo PNG si existe en C:\Pos\logo.png)
+        // Nombre empresa solo si NO hay logo (el logo ya lleva el branding)
+        if (!$hasLogo) {
+            $printer->setJustification(Printer::JUSTIFY_CENTER);
+            $printer->setEmphasis(true);
+            $printer->setTextSize(2, 2);
+            $printer->text(mb_strtoupper($negocio) . "\n");
+            $printer->setTextSize(1, 1);
+            $printer->setEmphasis(false);
+        }
+
+        // Número de venta en grande
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
         $printer->setTextSize(2, 2);
-        $printer->text(mb_strtoupper($negocio) . "\n");
-        $printer->setTextSize(1, 1);
-        $printer->setEmphasis(false);
-
-        // Número de venta + línea en blanco
-        $printer->setEmphasis(true);
         $printer->text("VENTA #{$venta->numero_venta}\n\n");
+        $printer->setTextSize(1, 1);
         $printer->setEmphasis(false);
 
         // Fecha / Hora / Cajero
@@ -107,12 +113,11 @@ class EscposPrintService
             $printer->text($this->columnasDots($izq, $der, $cols) . "\n");
         }
 
-        // Total
-        $printer->text($this->separador($cols) . "\n");
+        // Total: sin separador, bold, doble alto, alineado a la derecha
+        $printer->setJustification(Printer::JUSTIFY_RIGHT);
         $printer->setEmphasis(true);
         $printer->setTextSize(1, 2);
-        $total = "Bs. " . number_format((float) $venta->total, 2);
-        $printer->text($this->columnas("TOTAL:", $total, $cols) . "\n");
+        $printer->text("TOTAL: Bs. " . number_format((float) $venta->total, 2) . "\n");
         $printer->setTextSize(1, 1);
         $printer->setEmphasis(false);
 
@@ -122,35 +127,40 @@ class EscposPrintService
         $bytes = $connector->getData();
         $printer->close();
 
-        return $bytes;
+        // Byte 0x01 = indicar a Go que SÍ agregue el logo local
+        return chr(1) . $bytes;
     }
 
     private function buildComandaBytes(Venta $venta, $items): string
     {
-        $width = (int) config('printer.width', 80);
-        $cols  = match($width) { 58 => 32, 110 => 56, default => 48 };
+        $width    = (int) config('printer.width', 80);
+        $cols     = match($width) { 58 => 32, 110 => 56, default => 48 };
+        $colsDobl = intdiv($cols, 2); // cols efectivas con setTextSize(2,2)
 
         $connector = new DummyPrintConnector();
         $printer   = new Printer($connector);
 
-        // Cabecera: solo número de venta, sin logo ni nombre de empresa
-        $printer->setJustification(Printer::JUSTIFY_LEFT);
+        // Cabecera: Venta #{} centrado en doble tamaño
+        $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
-        $printer->setTextSize(1, 2);
+        $printer->setTextSize(2, 2);
         $printer->text("Venta #{$venta->numero_venta}\n");
         $printer->setTextSize(1, 1);
         $printer->setEmphasis(false);
 
-        // Items: cantidad nombreCorto....detalle (1A - 2F - 3M)
+        // Items: texto doble (2x2) con puntos hasta el detalle
+        $printer->setJustification(Printer::JUSTIFY_LEFT);
         foreach ($items as $item) {
             $nombre  = $this->nombreCorto($item);
             $detalle = $this->buildDetalle($item);
             $izq     = "{$item->cantidad} {$nombre}";
+            $printer->setTextSize(2, 2);
             if ($detalle) {
-                $printer->text($this->columnasDots($izq, $detalle, $cols) . "\n");
+                $printer->text($this->columnasDotsTrunc($izq, $detalle, $colsDobl) . "\n");
             } else {
-                $printer->text("{$izq}\n");
+                $printer->text(mb_substr($izq, 0, $colsDobl) . "\n");
             }
+            $printer->setTextSize(1, 1);
         }
 
         $printer->feed(4);
@@ -159,7 +169,8 @@ class EscposPrintService
         $bytes = $connector->getData();
         $printer->close();
 
-        return $bytes;
+        // Byte 0x00 = indicar a Go que NO agregue el logo local
+        return chr(0) . $bytes;
     }
 
     // ──────────────────────────────────────────────────────────────────
@@ -214,6 +225,17 @@ class EscposPrintService
 
     private function columnasDots(string $izq, string $der, int $cols): string
     {
+        $puntos = $cols - mb_strlen($izq) - mb_strlen($der);
+        return $izq . str_repeat('.', max(1, $puntos)) . $der;
+    }
+
+    // Igual que columnasDots pero trunca $izq si el texto es demasiado largo
+    private function columnasDotsTrunc(string $izq, string $der, int $cols): string
+    {
+        $maxIzq = $cols - mb_strlen($der) - 1;
+        if ($maxIzq > 0 && mb_strlen($izq) > $maxIzq) {
+            $izq = mb_substr($izq, 0, $maxIzq);
+        }
         $puntos = $cols - mb_strlen($izq) - mb_strlen($der);
         return $izq . str_repeat('.', max(1, $puntos)) . $der;
     }

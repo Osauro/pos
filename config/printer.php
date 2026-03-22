@@ -27,6 +27,13 @@ return [
      */
     'negocio' => env('PRINTER_NEGOCIO', 'Mi Negocio'),
 
+    /*
+     | El negocio tiene logo.png configurado en C:\\Pos\\logo.png.
+     | true  → PHP omite el nombre de empresa en el ticket (el logo ya lo muestra)
+     | false → PHP imprime el nombre en texto grande como cabecera
+     */
+    'logo' => (bool) env('PRINTER_LOGO', false),
+
     // ── ESC/POS directo (mike42/escpos-php + protocolo print://) ──────────
 
     /*
