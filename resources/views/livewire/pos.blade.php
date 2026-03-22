@@ -322,13 +322,27 @@
 
 @script
 <script>
-    // ── Persistir orden de productos en cookie (leíble por PHP en mount) ───────
+    // ── Persistir orden de productos (patrón paginate-bar) ──────────────────
+    (function () {
+        const LS_KEY  = 'pos_orden_productos';
+        const COOKIE  = 'pos_orden_productos';
+        const saved   = localStorage.getItem(LS_KEY);
+        if (saved) {
+            // Cookie para PHP (intento; puede no descifrarse si Laravel la encripta)
+            document.cookie = `${COOKIE}=${saved};path=/;max-age=31536000;SameSite=Lax`;
+            // Corrección segura vía Livewire igual que lo hace paginate-bar
+            if (saved !== @js($orden_productos)) {
+                $wire.set('orden_productos', saved);
+            }
+        }
+    })();
+
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('[wire\\:click^="setOrdenProductos"]');
         if (btn) {
             const match = btn.getAttribute('wire:click').match(/setOrdenProductos\('(.*?)'\)/);
             if (match) {
-                // Cookie de 1 año, accesible por PHP
+                localStorage.setItem('pos_orden_productos', match[1]);
                 document.cookie = `pos_orden_productos=${match[1]};path=/;max-age=31536000;SameSite=Lax`;
             }
         }
