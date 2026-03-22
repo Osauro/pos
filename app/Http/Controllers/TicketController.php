@@ -9,19 +9,23 @@ use Illuminate\Http\Request;
 class TicketController extends Controller
 {
     /**
-     * Comanda de cocina: todos los ítems excepto Refrescos.
+     * Comanda de cocina: solo Platos + Porciones.
      */
     public function comanda(Venta $venta)
     {
         $venta->load(['items.producto', 'turno.encargado']);
 
         $items = $venta->items->filter(
-            fn($item) => $item->producto && $item->producto->tipo !== 'Refrescos'
+            fn($item) => $item->producto && $item->producto->tipo === 'Platos'
+        )->values();
+
+        $porciones = $venta->items->filter(
+            fn($item) => $item->producto && $item->producto->tipo === 'Porciones'
         )->values();
 
         $width = config('printer.width', 80);
 
-        return view('tickets.comanda', compact('venta', 'items', 'width'));
+        return view('tickets.comanda', compact('venta', 'items', 'porciones', 'width'));
     }
 
     /**
@@ -33,11 +37,17 @@ class TicketController extends Controller
 
         $items = $venta->items->filter(fn($item) => $item->producto)->values();
 
-        $width     = config('printer.width', 80);
-        $negocio   = config('printer.negocio', 'Mi Negocio');
-        $soloTicket = $request->boolean('nocomanda'); // true → solo ticket, sin comanda
+        $width      = config('printer.width', 80);
+        $negocio    = config('printer.negocio', 'Mi Negocio');
+        $soloTicket = $request->boolean('nocomanda');
 
-        return view('tickets.cliente', compact('venta', 'items', 'width', 'negocio', 'soloTicket'));
+        $logoBase64 = null;
+        $logoPath   = storage_path('app/logo.png');
+        if (file_exists($logoPath)) {
+            $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+        }
+
+        return view('tickets.cliente', compact('venta', 'items', 'width', 'negocio', 'soloTicket', 'logoBase64'));
     }
 
     /**
@@ -78,14 +88,18 @@ class TicketController extends Controller
         $venta->load(['items.producto', 'turno.encargado']);
 
         $items = $venta->items->filter(
-            fn($item) => $item->producto && $item->producto->tipo !== 'Refrescos'
+            fn($item) => $item->producto && $item->producto->tipo === 'Platos'
+        )->values();
+
+        $porciones = $venta->items->filter(
+            fn($item) => $item->producto && $item->producto->tipo === 'Porciones'
         )->values();
 
         $width  = config('printer.width', 80);
         $paperW = $width === 58 ? 164.41 : 226.77;
         $paperH = 841.89;
 
-        $pdf = Pdf::loadView('tickets.comanda-pdf', compact('venta', 'items', 'width'))
+        $pdf = Pdf::loadView('tickets.comanda-pdf', compact('venta', 'items', 'porciones', 'width'))
             ->setPaper([0, 0, $paperW, $paperH], 'portrait')
             ->setOption(['dpi' => 96, 'isHtml5ParserEnabled' => true, 'isRemoteEnabled' => false]);
 

@@ -36,7 +36,7 @@
 
         body {
             font-family: 'FuenteA', 'Courier New', monospace;
-            font-size: {{ $width === 58 ? '12pt' : '14pt' }};
+            font-size: {{ $width === 58 ? '9pt' : '9pt' }};
             margin: 0;
             padding: 0 1mm 5mm;
             width: 100%;
@@ -49,7 +49,7 @@
         .bold    { font-weight: bold; }
 
         .negocio {
-            font-size: {{ $width === 58 ? '14pt' : '17pt' }};
+            font-size: {{ $width === 58 ? '11pt' : '12pt' }};
             font-weight: bold;
             text-align: center;
             letter-spacing: 1px;
@@ -57,7 +57,7 @@
         }
 
         .venta-num {
-            font-size: {{ $width === 58 ? '13pt' : '15pt' }};
+            font-size: {{ $width === 58 ? '11pt' : '12pt' }};
             font-weight: bold;
             text-align: center;
         }
@@ -76,7 +76,7 @@
             display: flex;
             justify-content: space-between;
             font-family: 'FuenteB', 'Courier New', monospace;
-            font-size: {{ $width === 58 ? '9pt' : '10pt' }};
+            font-size: {{ $width === 58 ? '8pt' : '8pt' }};
             margin-bottom: 0.5mm;
         }
 
@@ -108,7 +108,7 @@
         .total-row {
             display: flex;
             justify-content: space-between;
-            font-size: {{ $width === 58 ? '14pt' : '16pt' }};
+            font-size: {{ $width === 58 ? '11pt' : '11pt' }};
             font-weight: bold;
             margin: 2mm 0;
         }
@@ -125,14 +125,14 @@
             padding-top: 0;
         }
         .cmd-titulo {
-            font-size: {{ $width === 58 ? '20pt' : '26pt' }};
+            font-size: {{ $width === 58 ? '14pt' : '16pt' }};
             font-weight: bold;
             text-align: center;
             letter-spacing: 4px;
             margin-bottom: 1mm;
         }
         .cmd-venta {
-            font-size: {{ $width === 58 ? '16pt' : '20pt' }};
+            font-size: {{ $width === 58 ? '13pt' : '14pt' }};
             font-weight: bold;
             text-align: center;
             margin-bottom: 2mm;
@@ -147,13 +147,13 @@
             gap: 2mm;
         }
         .cmd-nombre {
-            font-size: {{ $width === 58 ? '13pt' : '16pt' }};
+            font-size: {{ $width === 58 ? '11pt' : '12pt' }};
             font-weight: bold;
             line-height: 1.3;
             flex: 1;
         }
         .cmd-detalle {
-            font-size: {{ $width === 58 ? '13pt' : '16pt' }};
+            font-size: {{ $width === 58 ? '11pt' : '12pt' }};
             font-weight: bold;
             white-space: nowrap;
         }
@@ -168,6 +168,12 @@
     </style>
 </head>
 <body>
+
+    @if(!empty($logoBase64))
+    <div class="center" style="margin-bottom:2mm">
+        <img src="{{ $logoBase64 }}" style="max-width:65%;max-height:18mm;object-fit:contain">
+    </div>
+    @endif
 
     <div class="negocio">{{ strtoupper($negocio) }}</div>
 
@@ -195,8 +201,32 @@
     <hr>
 
     @foreach($items as $item)
+        @php
+            $preposiciones = ['de','del','sin','con','a','al','en','para','por','y'];
+            $tokens = explode(' ', $item->producto->nombre);
+            $stopIdx = null; $digitIdx = null;
+            foreach ($tokens as $ti => $tok) {
+                if ($stopIdx === null && in_array(mb_strtolower($tok), $preposiciones)) { $stopIdx = $ti; break; }
+                if ($digitIdx === null && preg_match('/\d/', $tok)) { $digitIdx = $ti; break; }
+            }
+            $pluralES = function(string $w): string {
+                $ult = mb_strtolower(mb_substr($w, -1));
+                if ($ult === 'z') return mb_substr($w, 0, -1) . 'ces';
+                return $w . (in_array($ult, ['a','e','i','o','u']) ? 's' : 'es');
+            };
+            if ($item->cantidad > 1) {
+                if ($stopIdx !== null) {
+                    for ($ti = 0; $ti < $stopIdx; $ti++) $tokens[$ti] = $pluralES($tokens[$ti]);
+                } elseif ($digitIdx !== null && $digitIdx > 0) {
+                    $tokens[$digitIdx - 1] = $pluralES($tokens[$digitIdx - 1]);
+                } else {
+                    foreach ($tokens as $ti => $tok) $tokens[$ti] = $pluralES($tok);
+                }
+            }
+            $nombrePlural = implode(' ', $tokens);
+        @endphp
         <div class="item-row">
-            <span class="item-nombre">{{ $item->cantidad }} {{ $item->producto->nombre }}</span>
+            <span class="item-nombre">{{ $item->cantidad }} {{ $nombrePlural }}</span>
             <span class="item-precio">{{ number_format($item->subtotal, 2) }}</span>
         </div>
     @endforeach
@@ -224,7 +254,8 @@
 
     {{-- ══ COMANDA DE COCINA (segunda hoja / corte automático) ══ --}}
     @php
-        $comandaItems = $items->filter(fn($i) => $i->producto->tipo !== 'Refrescos')->values();
+        $comandaItems  = $items->filter(fn($i) => $i->producto->tipo === 'Platos')->values();
+        $porcionItems  = $items->filter(fn($i) => $i->producto->tipo === 'Porciones')->values();
     @endphp
     @if(!($soloTicket ?? false) && $comandaItems->count() > 0)
     <div class="comanda-wrap">
@@ -232,14 +263,6 @@
 
         @foreach($comandaItems as $item)
             @php
-                $arr = 0; $fid = 0; $mix = 0; $tiposUsados = 0;
-                if ($item->producto->tipo === 'Platos' && !empty($item->detalle)) {
-                    $arr = $item->detalle['arroz'] ?? 0;
-                    $fid = $item->detalle['fideo'] ?? 0;
-                    $mix = $item->detalle['mixto'] ?? 0;
-                    $tiposUsados = ($arr > 0 ? 1 : 0) + ($fid > 0 ? 1 : 0) + ($mix > 0 ? 1 : 0);
-                }
-                // Nombre corto: split en el primer espacio
                 $pos  = strpos($item->producto->nombre, ' ');
                 $cad1 = $pos !== false ? substr($item->producto->nombre, 0, $pos) : $item->producto->nombre;
                 $cad2 = $pos !== false ? trim(substr($item->producto->nombre, $pos + 1)) : '';
@@ -248,15 +271,35 @@
                     $cad1 .= in_array($ult, ['a','e','i','o','u']) ? 's' : 'es';
                 }
                 $sufijo      = strcasecmp($cad2, 'sin huevo') === 0 ? ' S/H' : '';
-                $nombreCorto = strtoupper($cad1 . $sufijo);
+                $nombreCorto = $cad1 . $sufijo;
+                $arr = 0; $fid = 0; $mix = 0;
+                if ($item->producto->tipo === 'Platos' && !empty($item->detalle)) {
+                    $arr = $item->detalle['arroz'] ?? 0;
+                    $fid = $item->detalle['fideo'] ?? 0;
+                    $mix = $item->detalle['mixto'] ?? 0;
+                }
+                $partes = [];
+                if ($arr > 0) $partes[] = "{$arr}A";
+                if ($fid > 0) $partes[] = "{$fid}F";
+                if ($mix > 0) $partes[] = "{$mix}M";
+                $detalle = implode(' - ', $partes);
             @endphp
             <div class="cmd-item">
                 <span class="cmd-nombre">{{ $item->cantidad }} {{ $nombreCorto }}</span>
-                @if($fid > 0 || $mix > 0)
-                    <span class="cmd-detalle">{{ $arr > 0 ? 'A:'.$arr.' ' : '' }}{{ $fid > 0 ? 'F:'.$fid.' ' : '' }}{{ $mix > 0 ? 'M:'.$mix : '' }}</span>
+                @if($detalle)
+                    <span class="cmd-detalle">{{ $detalle }}</span>
                 @endif
             </div>
         @endforeach
+
+        @if($porcionItems->count() > 0)
+            <div class="cmd-sep"><strong>----- P O R C I O N E S -----</strong></div>
+            @foreach($porcionItems as $item)
+                <div class="cmd-item">
+                    <span class="cmd-nombre">{{ $item->cantidad }} {{ $item->producto->nombre }}</span>
+                </div>
+            @endforeach
+        @endif
     </div>
     @endif
 

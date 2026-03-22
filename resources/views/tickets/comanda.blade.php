@@ -75,33 +75,48 @@
 
     @forelse($items as $item)
         @php
-            $arr = 0; $fid = 0; $mix = 0; $tiposUsados = 0;
+            $arr = 0; $fid = 0; $mix = 0;
             if ($item->producto->tipo === 'Platos' && !empty($item->detalle)) {
                 $arr = $item->detalle['arroz'] ?? 0;
                 $fid = $item->detalle['fideo'] ?? 0;
                 $mix = $item->detalle['mixto'] ?? 0;
-                $tiposUsados = ($arr > 0 ? 1 : 0) + ($fid > 0 ? 1 : 0) + ($mix > 0 ? 1 : 0);
             }
-            // Nombre corto: split en el primer espacio
+            $partes = [];
+            if ($arr > 0) $partes[] = "{$arr}A";
+            if ($fid > 0) $partes[] = "{$fid}F";
+            if ($mix > 0) $partes[] = "{$mix}M";
+            $detalle = implode(' - ', $partes);
+
             $pos  = strpos($item->producto->nombre, ' ');
             $cad1 = $pos !== false ? substr($item->producto->nombre, 0, $pos) : $item->producto->nombre;
             $cad2 = $pos !== false ? trim(substr($item->producto->nombre, $pos + 1)) : '';
             if ($item->cantidad > 1) {
                 $ult   = mb_strtolower(mb_substr($cad1, -1));
-                $cad1 .= in_array($ult, ['a','e','i','o','u']) ? 's' : 'es';
+                $cad1  = $ult === 'z'
+                    ? mb_substr($cad1, 0, -1) . 'ces'
+                    : $cad1 . (in_array($ult, ['a','e','i','o','u']) ? 's' : 'es');
             }
             $sufijo      = strcasecmp($cad2, 'sin huevo') === 0 ? ' S/H' : '';
-            $nombreCorto = strtoupper($cad1 . $sufijo);
+            $nombreCorto = $cad1 . $sufijo;
         @endphp
         <div class="item">
             <span class="item-nombre">{{ $item->cantidad }} {{ $nombreCorto }}</span>
-            @if($fid > 0 || $mix > 0)
-                    <span class="item-detalle">{{ $arr > 0 ? 'A:'.$arr.' ' : '' }}{{ $fid > 0 ? 'F:'.$fid.' ' : '' }}{{ $mix > 0 ? 'M:'.$mix : '' }}</span>
+            @if($detalle)
+                <span class="item-detalle">{{ $detalle }}</span>
             @endif
         </div>
     @empty
         <div style="margin-top:4mm">Sin ítems</div>
     @endforelse
+
+    @if(isset($porciones) && $porciones->count() > 0)
+        <div style="text-align:center;font-weight:bold;margin:3mm 0 1mm">----- P O R C I O N E S -----</div>
+        @foreach($porciones as $item)
+            <div class="item">
+                <span class="item-nombre">{{ $item->cantidad }} {{ $item->producto->nombre }}</span>
+            </div>
+        @endforeach
+    @endif
 
     <script>
         (function () {
