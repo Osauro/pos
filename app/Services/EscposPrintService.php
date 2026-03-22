@@ -121,6 +121,20 @@ class EscposPrintService
         $printer->setTextSize(1, 1);
         $printer->setEmphasis(false);
 
+        // Pie: gracias + encargado del turno
+        $printer->setJustification(Printer::JUSTIFY_CENTER);
+        $printer->setEmphasis(true);
+        $printer->text("\nGRACIAS POR SU COMPRA\n");
+        $printer->setEmphasis(false);
+        if ($venta->turno && $venta->turno->encargado) {
+            $encargado = $venta->turno->encargado;
+            $printer->setJustification(Printer::JUSTIFY_LEFT);
+            $printer->text($this->columnas("Encargado:", $encargado->nombre, $cols) . "\n");
+            if (!empty($encargado->celular)) {
+                $printer->text($this->columnas("Celular:", $encargado->celular, $cols) . "\n");
+            }
+        }
+
         $printer->feed(4);
         $printer->cut(Printer::CUT_PARTIAL);
 
@@ -144,7 +158,7 @@ class EscposPrintService
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
         $printer->setTextSize(2, 2);
-        $printer->text("Venta #{$venta->numero_venta}\n");
+        $printer->text("Venta #{$venta->numero_venta}\n\n");
         $printer->setTextSize(1, 1);
         $printer->setEmphasis(false);
 
