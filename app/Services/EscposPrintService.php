@@ -183,17 +183,17 @@ class EscposPrintService
         $printer->setTextSize(1, 1);
         $printer->setEmphasis(false);
 
-        // Items: texto doble ancho, altura normal (2x1) con puntos hasta el detalle
+        // Items: ancho normal, altura doble (1x2) — más caracteres por línea
         $printer->setJustification(Printer::JUSTIFY_LEFT);
         foreach ($items as $item) {
             $nombre  = $this->nombreCorto($item);
             $detalle = $this->buildDetalle($item);
             $izq     = "{$item->cantidad} {$nombre}";
-            $printer->setTextSize(2, 1);
+            $printer->setTextSize(1, 2);
             if ($detalle) {
-                $printer->text($this->columnasDotsTrunc($izq, $detalle, $colsDobl) . "\n");
+                $printer->text($this->columnasDotsTrunc($izq, $detalle, $cols) . "\n");
             } else {
-                $printer->text(mb_substr($izq, 0, $colsDobl) . "\n");
+                $printer->text(mb_substr($izq, 0, $cols) . "\n");
             }
             $printer->setTextSize(1, 1);
         }
@@ -306,6 +306,6 @@ class EscposPrintService
         if ($fid > 0) $partes[] = "{$fid}F";
         if ($mix > 0) $partes[] = "{$mix}M";
 
-        return implode(' - ', $partes);
+        return implode('-', $partes);
     }
 }
