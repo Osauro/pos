@@ -270,9 +270,7 @@ class EscposPrintService
         if ($porciones && $porciones->isNotEmpty()) {
             $printer->setJustification(Printer::JUSTIFY_CENTER);
             $printer->setEmphasis(true);
-            $printer->text("\n" . $this->separador($cols) . "\n");
-            $printer->text("P O R C I O N E S\n");
-            $printer->text($this->separador($cols) . "\n");
+            $printer->text("\n----- P O R C I O N E S -----\n");
             $printer->setEmphasis(false);
             $printer->setJustification(Printer::JUSTIFY_LEFT);
             foreach ($porciones as $item) {
