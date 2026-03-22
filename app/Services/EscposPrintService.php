@@ -113,25 +113,22 @@ class EscposPrintService
             $printer->text($this->columnasDots($izq, $der, $cols) . "\n");
         }
 
-        // Total: sin separador, bold, doble alto, alineado a la derecha
+        // Total: negrita, tamaño normal, alineado a la derecha
         $printer->setJustification(Printer::JUSTIFY_RIGHT);
         $printer->setEmphasis(true);
-        $printer->setTextSize(1, 2);
         $printer->text("TOTAL: Bs. " . number_format((float) $venta->total, 2) . "\n");
-        $printer->setTextSize(1, 1);
         $printer->setEmphasis(false);
 
-        // Pie: gracias + encargado del turno
+        // Pie: gracias + encargado del turno (todo centrado)
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
         $printer->text("\nGRACIAS POR SU COMPRA\n");
         $printer->setEmphasis(false);
         if ($venta->turno && $venta->turno->encargado) {
             $encargado = $venta->turno->encargado;
-            $printer->setJustification(Printer::JUSTIFY_LEFT);
-            $printer->text($this->columnas("Encargado:", $encargado->nombre, $cols) . "\n");
+            $printer->text("Encargado: {$encargado->nombre}\n");
             if (!empty($encargado->celular)) {
-                $printer->text($this->columnas("Celular:", $encargado->celular, $cols) . "\n");
+                $printer->text("Celular: {$encargado->celular}\n");
             }
         }
 
