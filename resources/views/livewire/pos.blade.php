@@ -336,7 +336,7 @@
         if (!isAndroid && ticketUrl) {
             // ── ESC/POS directo (todas las PCs y tablets no-Android) ──────────
             launchProtocol(ticketUrl);
-            if (comandaUrl) launchProtocol(comandaUrl, 600);
+            if (comandaUrl) launchProtocol(comandaUrl, 1800);
         } else if (isAndroid) {
             // ── Android: fallback HTML con autoprint ──────────────────────────
             window.open(`/ticket/cliente/${ventaId}?nocomanda=1`, '_blank');

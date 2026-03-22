@@ -50,7 +50,8 @@ class EscposPrintService
 
             $bytes = $this->buildComandaBytes($venta, $items);
             return 'print://' . $this->encodePayload($bytes);
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            \Log::error('EscposPrintService::comandaUrl ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
             return null;
         }
     }
@@ -80,11 +81,11 @@ class EscposPrintService
             $printer->setEmphasis(false);
         }
 
-        // Número de venta en grande
+        // Número de venta en grande (salto antes y después)
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
         $printer->setTextSize(2, 2);
-        $printer->text("VENTA #{$venta->numero_venta}\n\n");
+        $printer->text("\nVENTA #{$venta->numero_venta}\n\n");
         $printer->setTextSize(1, 1);
         $printer->setEmphasis(false);
 
@@ -179,8 +180,8 @@ class EscposPrintService
         $bytes = $connector->getData();
         $printer->close();
 
-        // Byte 0x00 = indicar a Go que NO agregue el logo local
-        return chr(0) . $bytes;
+        // Byte 0x01 = indicar a Go que SÍ agregue el logo local
+        return chr(1) . $bytes;
     }
 
     // ──────────────────────────────────────────────────────────────────
