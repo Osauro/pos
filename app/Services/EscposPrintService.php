@@ -32,6 +32,7 @@ class EscposPrintService
     public function ticketUrl(Venta $venta): ?string
     {
         try {
+            if (!$this->hayPlatos($venta)) return null;
             $bytes = $this->buildTicketBytes($venta);
             return 'print://' . $this->encodePayload($bytes);
         } catch (\Throwable $e) {
@@ -48,15 +49,12 @@ class EscposPrintService
     public function combinedUrl(Venta $venta): ?string
     {
         try {
-            $ticketBytes = $this->buildTicketBytes($venta);
-
             $items = $venta->items->filter(
-                fn($i) => $i->producto && $i->producto->tipo !== 'Refrescos'
+                fn($i) => $i->producto && $i->producto->tipo === 'Platos'
             );
-            if ($items->isEmpty()) {
-                return 'print://' . $this->encodePayload($ticketBytes);
-            }
+            if ($items->isEmpty()) return null;
 
+            $ticketBytes  = $this->buildTicketBytes($venta);
             $comandaBytes = $this->buildComandaBytes($venta, $items);
             $ticketLen    = strlen($ticketBytes);
             $combined     = chr(2) . pack('N', $ticketLen) . $ticketBytes . $comandaBytes;
@@ -71,7 +69,7 @@ class EscposPrintService
     {
         try {
             $items = $venta->items->filter(
-                fn($i) => $i->producto && $i->producto->tipo !== 'Refrescos'
+                fn($i) => $i->producto && $i->producto->tipo === 'Platos'
             );
             if ($items->isEmpty()) return null;
 
@@ -81,6 +79,17 @@ class EscposPrintService
             \Log::error('EscposPrintService::comandaUrl ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
             return null;
         }
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // Helpers de decisión de impresión
+    // ──────────────────────────────────────────────────────────────────
+
+    private function hayPlatos(Venta $venta): bool
+    {
+        return $venta->items->contains(
+            fn($i) => $i->producto && $i->producto->tipo === 'Platos'
+        );
     }
 
     // ──────────────────────────────────────────────────────────────────

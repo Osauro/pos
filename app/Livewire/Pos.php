@@ -66,6 +66,8 @@ class Pos extends Component
                 'total'        => 0,
                 'estado'       => 'Pendiente',
             ]);
+        } elseif (is_null($venta->numero_venta)) {
+            $venta->update(['numero_venta' => $this->getNumeroVenta($turnoActivo)]);
         }
 
         $this->venta_id = $venta->id;
@@ -501,10 +503,12 @@ class Pos extends Component
                     } else {
                         $printUrl = $svc->comandaUrl($ventaParaImprimir);
                     }
-                    $this->dispatch('imprimir-venta',
-                        ventaId:  $ventaCompletadaId,
-                        printUrl: $printUrl,
-                    );
+                    if ($printUrl !== null) {
+                        $this->dispatch('imprimir-venta',
+                            ventaId:  $ventaCompletadaId,
+                            printUrl: $printUrl,
+                        );
+                    }
                 } else {
                     $this->dispatch('imprimir-venta', ventaId: $ventaCompletadaId);
                 }
