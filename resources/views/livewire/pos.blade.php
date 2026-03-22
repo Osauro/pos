@@ -323,27 +323,30 @@
     }
 
     $wire.on('imprimir-venta', (data) => {
-        const d        = data[0] || data;
-        const ventaId  = d.ventaId;
-        const printUrl = d.printUrl ?? null;
+        const d           = data[0] || data;
+        const ventaId     = d.ventaId;
+        const printUrl    = d.printUrl ?? null;
+        const autoTicket  = d.autoTicket  ?? true;
+        const autoComanda = d.autoComanda ?? true;
         if (!ventaId) return;
 
-        // Solo Android usa fallback HTML/PDF.
-        // Windows, iOS, iPad, etc. usan siempre print:// (ESC/POS directo).
+        // Android y dispositivos móviles usan fallback HTML (print:// no disponible).
         const isAndroid = /Android/i.test(navigator.userAgent);
 
         if (!isAndroid && printUrl) {
             // ── ESC/POS directo: ticket + comanda en un solo print:// ─────────
             launchProtocol(printUrl);
-        } else if (isAndroid) {
-            // ── Android: fallback HTML con autoprint ──────────────────────────
-            window.open(`/ticket/cliente/${ventaId}?nocomanda=1`, '_blank');
-            setTimeout(() => {
+        } else if (isAndroid || !printUrl) {
+            // ── HTML fallback: ticket y/o comanda en una sola ventana ─────────
+            // Se evita abrir múltiples ventanas (bloqueadas por popup-blocker).
+            if (autoTicket && autoComanda) {
+                // Ticket + comanda en la misma página (segunda hoja)
+                window.open(`/ticket/cliente/${ventaId}`, '_blank');
+            } else if (autoTicket) {
+                window.open(`/ticket/cliente/${ventaId}?nocomanda=1`, '_blank');
+            } else if (autoComanda) {
                 window.open(`/ticket/comanda/${ventaId}`, '_blank');
-            }, 10000);
-        } else {
-            // ── Sin printUrl (escpos desactivado): ventana impresora fallback ──
-            window.open(`/ticket/cliente/${ventaId}`, '_blank', WIN_OPTS);
+            }
         }
     });
 </script>

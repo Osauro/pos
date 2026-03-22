@@ -167,10 +167,24 @@ class EscposPrintService
     {
         $items   = $venta->items->filter(fn($i) => $i->producto)->values();
         $width   = (int) config('printer.width', 80);
-        $cols    = match($width) { 58 => 32, 110 => 56, default => 48 };
+        $cols    = match ($width) {
+            58 => 32,
+            110 => 56,
+            default => 48
+        };
 
         $connector = new DummyPrintConnector();
         $printer   = new Printer($connector);
+
+        // Nombre del negocio en texto (solo cuando no hay logo configurado)
+        if (!config('printer.logo')) {
+            $printer->setJustification(Printer::JUSTIFY_CENTER);
+            $printer->setEmphasis(true);
+            $printer->setTextSize(2, 1);
+            $printer->text(mb_strtoupper(config('printer.negocio', 'MI NEGOCIO')) . "\n");
+            $printer->setTextSize(1, 1);
+            $printer->setEmphasis(false);
+        }
 
         // Número de venta en grande (salto antes y después)
         $printer->setJustification(Printer::JUSTIFY_CENTER);
@@ -190,12 +204,12 @@ class EscposPrintService
         }
 
         // Detalle
-        $printer->text($this->separador($cols) . "\n");
+        $printer->text("\n");
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
-        $printer->text("D E T A L L E\n");
+        $printer->text("----- D E T A L L E -----\n");
         $printer->setEmphasis(false);
-        $printer->text($this->separador($cols) . "\n");
+        $printer->text("\n");
         $printer->setJustification(Printer::JUSTIFY_LEFT);
 
         foreach ($items as $item) {
@@ -216,12 +230,10 @@ class EscposPrintService
         $printer->setEmphasis(true);
         $printer->text("\nGRACIAS POR SU COMPRA\n");
         $printer->setEmphasis(false);
-        if ($venta->turno && $venta->turno->encargado) {
-            $encargado = $venta->turno->encargado;
-            $printer->text("Encargado: {$encargado->nombre}\n");
-            if (!empty($encargado->celular)) {
-                $printer->text("Celular: {$encargado->celular}\n");
-            }
+        $encargado = $venta->turno->encargado;
+        $printer->text("Encargado: {$encargado->nombre}\n");
+        if (!empty($encargado->celular)) {
+            $printer->text("Celular: {$encargado->celular}\n");
         }
 
         $printer->feed(4);
@@ -230,14 +242,18 @@ class EscposPrintService
         $bytes = $connector->getData();
         $printer->close();
 
-        // Byte 0x01 = indicar a Go que SÍ agregue el logo local
-        return chr(1) . $bytes;
+        // chr(1) = Go agrega logo; chr(0) = sin logo (ya se imprimió el nombre en texto)
+        return (config('printer.logo') ? chr(1) : chr(0)) . $bytes;
     }
 
     private function buildComandaBytes(Venta $venta, $items, $porciones = null): string
     {
         $width    = (int) config('printer.width', 80);
-        $cols     = match($width) { 58 => 32, 110 => 56, default => 48 };
+        $cols     = match ($width) {
+            58 => 32,
+            110 => 56,
+            default => 48
+        };
         $colsDobl = intdiv($cols, 2); // cols efectivas con setTextSize(2,2)
 
         $connector = new DummyPrintConnector();
@@ -368,7 +384,7 @@ class EscposPrintService
 
         if ($item->cantidad > 1) {
             $ult   = mb_strtolower(mb_substr($cad1, -1));
-            $cad1 .= in_array($ult, ['a','e','i','o','u']) ? 's' : 'es';
+            $cad1 .= in_array($ult, ['a', 'e', 'i', 'o', 'u']) ? 's' : 'es';
         }
 
         $sufijo = strcasecmp($cad2, 'sin huevo') === 0 ? ' S/H' : '';

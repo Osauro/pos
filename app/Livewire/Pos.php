@@ -505,12 +505,18 @@ class Pos extends Component
                     }
                     if ($printUrl !== null) {
                         $this->dispatch('imprimir-venta',
-                            ventaId:  $ventaCompletadaId,
-                            printUrl: $printUrl,
+                            ventaId:     $ventaCompletadaId,
+                            printUrl:    $printUrl,
+                            autoTicket:  $autoTicket,
+                            autoComanda: $autoComanda,
                         );
                     }
                 } else {
-                    $this->dispatch('imprimir-venta', ventaId: $ventaCompletadaId);
+                    $this->dispatch('imprimir-venta',
+                        ventaId:     $ventaCompletadaId,
+                        autoTicket:  (bool) config('printer.auto_ticket'),
+                        autoComanda: (bool) config('printer.auto_comanda'),
+                    );
                 }
             }
 
