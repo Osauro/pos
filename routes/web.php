@@ -24,8 +24,8 @@ Route::get('/manifest.webmanifest', function () {
     $nombre   = $tenant?->nombre ?? config('app.name', 'POS');
 
     $manifest = [
-        'name'             => $nombre . ' — POS',
-        'short_name'       => 'POS',
+        'name'             => $nombre,
+        'short_name'       => $nombre,
         'description'      => 'Sistema POS — ' . $nombre,
         'start_url'        => '/',
         'display'          => 'standalone',

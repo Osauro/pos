@@ -8,7 +8,7 @@
     <meta name="description" content="TPV — Sistema de Punto de Venta" />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', config('app.name', 'TPV'))</title>
+    <title>{{ currentTenant()?->nombre ?? config('app.name', 'POS') }}</title>
 
     <!-- PWA -->
     <link rel="manifest" href="{{ route('pwa.manifest') }}" />
