@@ -17,6 +17,43 @@ use App\Livewire\Admin\PagosManager;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\EscposController;
 
+// -- Manifest din�mico por tenant (PWA) ----------------------------------------
+Route::get('/manifest.webmanifest', function () {
+    $tenant   = currentTenant();
+    $color    = $tenant?->themeColor() ?? '#29adb2';
+    $nombre   = $tenant?->nombre ?? config('app.name', 'POS');
+
+    $manifest = [
+        'name'             => $nombre . ' — POS',
+        'short_name'       => 'POS',
+        'description'      => 'Sistema POS — ' . $nombre,
+        'start_url'        => '/',
+        'display'          => 'standalone',
+        'background_color' => '#ffffff',
+        'theme_color'      => $color,
+        'orientation'      => 'any',
+        'scope'            => '/',
+        'lang'             => 'es',
+        'icons'            => [
+            [
+                'src'     => '/assets/images/icon-192.png',
+                'sizes'   => '192x192',
+                'type'    => 'image/png',
+                'purpose' => 'any maskable',
+            ],
+            [
+                'src'     => '/assets/images/icon-512.png',
+                'sizes'   => '512x512',
+                'type'    => 'image/png',
+                'purpose' => 'any maskable',
+            ],
+        ],
+    ];
+
+    return response()->json($manifest)
+        ->header('Content-Type', 'application/manifest+json');
+})->name('pwa.manifest');
+
 // -- Rutas p�blicas ------------------------------------------------------------
 Route::get('/login', Login::class)->name('login')->middleware('guest');
 

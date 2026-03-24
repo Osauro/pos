@@ -11,12 +11,12 @@
     <title>@yield('title', config('app.name', 'TPV'))</title>
 
     <!-- PWA -->
-    <link rel="manifest" href="{{ asset('manifest.json') }}" />
+    <link rel="manifest" href="{{ route('pwa.manifest') }}" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="TPV" />
-    <meta name="theme-color" content="#29adb2" />
+    <meta name="apple-mobile-web-app-title" content="{{ currentTenant()?->nombre ?? config('app.name') }}" />
+    <meta name="theme-color" content="{{ currentTenant()?->themeColor() ?? '#29adb2' }}" />
     <link rel="apple-touch-icon" href="{{ asset('assets/images/icon-192.png') }}" />
 
     <!-- Favicon -->
