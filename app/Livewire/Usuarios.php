@@ -150,12 +150,9 @@ class Usuarios extends Component
     {
         $this->validate();
 
-        $pin = $this->generarPin();
-
         $usuario = User::findOrFail($this->usuario_id);
         $usuario->nombre  = $this->nombre;
         $usuario->celular = $this->celular;
-        $usuario->pin     = Hash::make($pin);
         $usuario->save();
 
         // Actualizar rol en el tenant
@@ -164,7 +161,7 @@ class Usuarios extends Component
         ]);
 
         $this->closeModal();
-        $this->dispatch('swal:pin', nombre: $usuario->nombre, pin: $pin);
+        $this->showSuccessNotification('Usuario actualizado exitosamente.');
     }
 
     public function resetPin($id)

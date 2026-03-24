@@ -42,12 +42,12 @@ class CrearTienda extends Component
         // Asignar al usuario creador como admin del tenant
         $tenant->users()->attach($user->id, ['role' => 'admin', 'is_active' => true]);
 
-        // Entrar directamente al nuevo tenant
-        $user->switchTenant($tenant->id);
+        // Seleccionar el nuevo tenant directamente en sesión
+        session(['current_tenant_id' => $tenant->id]);
 
         session()->flash('success', "¡Tienda \"{$tenant->nombre}\" creada! Tienes 30 días de prueba gratuita.");
 
-        $this->redirect(route('ventas'), navigate: true);
+        $this->redirect(route('dashboard'), navigate: false);
     }
 
     public function render()
