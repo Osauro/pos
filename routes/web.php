@@ -17,6 +17,8 @@ use App\Livewire\Admin\PagosManager;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\EscposController;
 
+use App\Livewire\Register;
+
 // -- Manifest din�mico por tenant (PWA) ----------------------------------------
 Route::get('/manifest.webmanifest', function () {
     $tenant   = currentTenant();
@@ -72,6 +74,7 @@ Route::get('/', function () {
 })->name('landing');
 
 Route::get('/login', Login::class)->name('login')->middleware('guest');
+Route::get('/register', Register::class)->name('register')->middleware('guest');
 
 Route::post('/logout', function () {
     Auth::logout();

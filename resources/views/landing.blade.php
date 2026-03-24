@@ -453,7 +453,7 @@
                     <strong style="color:#fff;">Solo 50 Bs al año.</strong>
                 </p>
                 <div class="d-flex gap-3 flex-wrap hero-buttons">
-                    <a href="{{ route('login') }}" class="btn-hero-primary">
+                    <a href="{{ route('register') }}" class="btn-hero-primary">
                         <i class="fa-solid fa-store"></i> Activar mi tienda gratis
                     </a>
                     <a href="#funciones" class="btn-hero-secondary">
@@ -686,7 +686,7 @@
                     <div class="price-feature"><i class="fa-solid fa-check"></i> Soporte por WhatsApp</div>
                     <div class="price-feature"><i class="fa-solid fa-check"></i> Actualizaciones incluidas</div>
 
-                    <a href="{{ route('login') }}" class="btn-price">
+                    <a href="{{ route('register') }}" class="btn-price">
                         <i class="fa-solid fa-store me-2"></i>Empezar gratis ahora
                     </a>
                     <p class="trial-note">30 días de prueba gratuita · Sin tarjeta de crédito</p>
@@ -708,7 +708,7 @@
             Sin costos ocultos. Sin letra pequeña.
         </p>
         <div class="text-center">
-            <a href="{{ route('login') }}" class="btn-hero-primary" style="font-size:1.05rem; padding:16px 40px;">
+            <a href="{{ route('register') }}" class="btn-hero-primary" style="font-size:1.05rem; padding:16px 40px;">
                 <i class="fa-solid fa-rocket"></i> Activar mi tienda gratis
             </a>
             <div class="mt-3" style="font-size:.82rem; color:var(--text-muted);">

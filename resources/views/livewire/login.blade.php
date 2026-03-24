@@ -91,6 +91,15 @@
         </div>
     </form>
 
+    <div class="text-center mt-3">
+        <p class="text-muted" style="font-size:.88rem;">
+            ¿No tienes cuenta?
+            <a href="{{ route('register') }}" class="fw-bold" style="color:var(--theme-default, #29adb2); text-decoration:none;">
+                Crear cuenta gratis →
+            </a>
+        </p>
+    </div>
+
     <div class="text-center mt-4" style="display: none;">
         <p class="text-muted" style="font-size: 0.9rem;">
             <i class="fa-solid fa-shield-halved me-1"></i>
