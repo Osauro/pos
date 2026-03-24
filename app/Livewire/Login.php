@@ -59,9 +59,11 @@ class Login extends Component
         $tenant = $usuario->tenants()->wherePivot('is_active', true)->first();
         if ($tenant) {
             $usuario->switchTenant($tenant->id);
+            return redirect()->intended(route('ventas'));
         }
 
-        return redirect()->intended(route('ventas'));
+        // Sin tienda: redirigir a crear tienda
+        return redirect()->route('crear-tienda');
     }
 
     public function render()
