@@ -5,47 +5,51 @@ namespace App\Livewire\Admin;
 use App\Models\Tenant;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\Rule;
 use Livewire\Component;
 
 #[Layout('layouts.overlay')]
 class CrearTienda extends Component
 {
-    #[Rule('required|min:2|max:100')]
-    public string $nombre = '';
+    public string $nombreTenant    = '';
+    public string $celularTenant   = '';
+    public string $direccionTenant = '';
+    public int    $colorTenant     = 3;
 
-    #[Rule('nullable|max:20')]
-    public string $telefono = '';
+    protected array $rules = [
+        'nombreTenant'    => 'required|min:2|max:100',
+        'celularTenant'   => 'nullable|max:20',
+        'direccionTenant' => 'nullable|max:200',
+        'colorTenant'     => 'required|integer|min:2|max:10',
+    ];
 
-    #[Rule('nullable|max:200')]
-    public string $direccion = '';
+    protected array $messages = [
+        'nombreTenant.required' => 'El nombre de la tienda es obligatorio.',
+        'nombreTenant.min'      => 'El nombre debe tener al menos 2 caracteres.',
+        'nombreTenant.max'      => 'El nombre no puede superar 100 caracteres.',
+    ];
 
-    #[Rule('required|integer|min:2|max:10')]
-    public int $theme_number = 3;
+    public function seleccionarColor(int $num): void
+    {
+        $this->colorTenant = $num;
+    }
 
-    public function save(): void
+    public function activar(): void
     {
         $this->validate();
 
         $tenant = Tenant::create([
-            'nombre'       => $this->nombre,
-            'slug'         => Str::slug($this->nombre) . '-' . Str::random(4),
-            'telefono'     => $this->telefono ?: null,
-            'direccion'    => $this->direccion ?: null,
+            'nombre'       => $this->nombreTenant,
+            'slug'         => Str::slug($this->nombreTenant) . '-' . Str::random(4),
+            'telefono'     => $this->celularTenant ?: null,
+            'direccion'    => $this->direccionTenant ?: null,
             'status'       => 'activo',
             'bill_date'    => now()->addDays(30)->toDateString(),
-            'theme_number' => $this->theme_number,
+            'theme_number' => $this->colorTenant,
         ]);
 
-        $user = auth()->user();
+        $tenant->users()->attach(auth()->id(), ['role' => 'admin', 'is_active' => true]);
 
-        // Asignar al usuario creador como admin del tenant
-        $tenant->users()->attach($user->id, ['role' => 'admin', 'is_active' => true]);
-
-        // Seleccionar el nuevo tenant directamente en sesión
         session(['current_tenant_id' => $tenant->id]);
-
-        session()->flash('success', "¡Tienda \"{$tenant->nombre}\" creada! Tienes 30 días de prueba gratuita.");
 
         $this->redirect(route('dashboard'), navigate: false);
     }
