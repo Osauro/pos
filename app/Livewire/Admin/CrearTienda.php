@@ -7,7 +7,7 @@ use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
-#[Layout('layouts.overlay')]
+#[Layout('layouts.theme.app')]
 class CrearTienda extends Component
 {
     public string $nombreTenant    = '';

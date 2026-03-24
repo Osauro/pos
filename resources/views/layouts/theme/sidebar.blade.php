@@ -1,4 +1,4 @@
-<aside class="page-sidebar">
+<aside class="page-sidebar" @if(request()->routeIs('crear-tienda')) style="display:none !important;" @endif>
     <div class="left-arrow" id="left-arrow"><i data-feather="arrow-left"></i></div>
     <div class="main-sidebar" id="main-sidebar">
         @php

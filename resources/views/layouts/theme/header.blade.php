@@ -1,4 +1,4 @@
-<header class="page-header row">
+<header class="page-header row" @if(request()->routeIs('crear-tienda')) style="display:none !important;" @endif>
     <div class="logo-wrapper d-flex align-items-center col-auto p-0">
         <a href="{{ route('pos') }}">
             <img class="light-logo img-fluid" src="{{ asset('assets/images/logo.png') }}" alt="TPV Logo"
