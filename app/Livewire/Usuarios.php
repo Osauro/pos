@@ -40,10 +40,14 @@ class Usuarios extends Component
 
     public function render()
     {
-        $usuarios = User::whereHas('tenants', function ($q) {
-                $q->where('tenants.id', currentTenantId())
+        $tenantId = currentTenantId();
+        $usuarios = User::whereHas('tenants', function ($q) use ($tenantId) {
+                $q->where('tenants.id', $tenantId)
                   ->where('tenant_user.is_active', true);
             })
+            ->with(['tenants' => function ($q) use ($tenantId) {
+                $q->where('tenants.id', $tenantId);
+            }])
             ->orderBy('id', 'desc')
             ->paginate($this->perPage);
 

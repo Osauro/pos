@@ -55,13 +55,14 @@
                                         <div class="card-footer bg-light py-2 px-3">
                                             <div class="d-flex justify-content-between align-items-center small">
                                                 <div>
-                                                    @if ($usuario->tipo === 'admin')
+                                                    @php $rolTenant = $usuario->tenants->first()?->pivot->role ?? 'operador'; @endphp
+                                                    @if ($rolTenant === 'admin')
                                                         <span class="badge bg-danger">
                                                             <i class="fa-solid fa-crown me-1"></i>Admin
                                                         </span>
                                                     @else
-                                                        <span class="badge bg-secondary">
-                                                            <i class="fa-solid fa-user me-1"></i>Usuario
+                                                        <span class="badge bg-primary">
+                                                            <i class="fa-solid fa-user-tie me-1"></i>Operador
                                                         </span>
                                                     @endif
                                                 </div>
