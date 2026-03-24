@@ -75,7 +75,7 @@
                                 </form>
                             @endforeach
 
-                            @if($esLandlord)
+                            @if(true)
                             <a href="{{ route('crear-tienda') }}" style="width:160px; display:block; text-decoration:none;">
                                 <div style="border-radius:14px; overflow:hidden; border:3px dashed rgba(40,167,69,0.7); box-shadow:0 4px 20px rgba(0,0,0,.2); transition:transform .15s;"
                                     onmouseenter="this.style.transform='scale(1.04)'"
