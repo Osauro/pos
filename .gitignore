@@ -31,3 +31,5 @@ agent/*.exe
 agent/config.json
 agent/logo.png
 logo.png
+
+misocio/
