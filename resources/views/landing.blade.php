@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="description" content="MiSocio POS — Sistema de punto de venta para negocios de comida. Fácil, rápido y solo 50 Bs/año.">
     <title>MiSocio POS — Sistema POS para tu negocio de comida</title>
 
