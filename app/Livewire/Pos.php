@@ -150,6 +150,12 @@ class Pos extends Component
     // â”€â”€â”€ Agregar al carrito â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function agregarAlCarrito($productoId)
     {
+        // Verificar que haya un turno activo esta semana
+        if (!$this->getTurnoActivo()) {
+            $this->swalWarning('Sin turno activo', 'No hay un turno abierto para esta semana. Crea un turno antes de registrar ventas.');
+            return;
+        }
+
         // Verificar si existe movimiento hoy después de las 02:00
         if (!$this->verificarMovimientosHoy()) {
             $this->producto_pendiente_caja_id = $productoId;
