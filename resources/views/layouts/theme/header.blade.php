@@ -1,6 +1,6 @@
 <header class="page-header row">
     <div class="logo-wrapper d-flex align-items-center col-auto p-0">
-        <a href="{{ route('pos') }}">
+        <a href="/">
             <img class="light-logo img-fluid" src="{{ asset('assets/images/logo.png') }}" alt="TPV Logo"
                 style="height: 60px!important; margin-left:10px" />
         </a>

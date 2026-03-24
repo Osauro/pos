@@ -63,7 +63,14 @@ Route::get('/download/printpos', function () {
     ]);
 })->name('download.printpos')->middleware('auth');
 
-// -- Rutas p�blicas ------------------------------------------------------------
+// -- Rutas públicas ------------------------------------------------------------
+Route::get('/', function () {
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+    return view('landing');
+})->name('landing');
+
 Route::get('/login', Login::class)->name('login')->middleware('guest');
 
 Route::post('/logout', function () {
@@ -96,8 +103,6 @@ Route::get('/crear-tienda', \App\Livewire\Admin\CrearTienda::class)->name('crear
 
 // -- Rutas del negocio (requieren tenant activo en sesi�n) ---------------------
 Route::middleware(['auth', 'tenant'])->group(function () {
-    Route::get('/', fn() => redirect()->route('dashboard'));
-
     // Dashboard tenant
     Route::get('/dashboard', HomeTenant::class)->name('dashboard');
 
