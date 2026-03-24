@@ -8,7 +8,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Rule;
 use Livewire\Component;
 
-#[Layout('layouts.landlord.app')]
+#[Layout('layouts.theme.app')]
 class CrearTienda extends Component
 {
     #[Rule('required|min:2|max:100')]
