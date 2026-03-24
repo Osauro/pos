@@ -7,25 +7,25 @@ use Carbon\Carbon;
 
 trait WithPermisos
 {
-    // Superadmin ID=1
+    // Landlord (super admin del sistema)
     public function esSuperAdmin(): bool
     {
-        return auth()->check() && auth()->id() === 1;
+        return isLandlord();
     }
 
-    // Es admin (tipo = 'admin')
+    // Admin del negocio (landlord también cuenta como admin)
     public function esAdmin(): bool
     {
-        return auth()->check() && auth()->user()->tipo === 'admin';
+        return isTenantAdmin();
     }
 
-    // Es user (tipo = 'user')
+    // Operador (solo POS/ventas)
     public function esUser(): bool
     {
-        return auth()->check() && auth()->user()->tipo === 'user';
+        return auth()->check() && ! isTenantAdmin();
     }
 
-    // Admin con turno de la semana vigente (actual)
+    // Admin con turno propio de la semana vigente
     public function tieneTurnoActivo(): bool
     {
         if (!auth()->check()) return false;
@@ -39,15 +39,31 @@ trait WithPermisos
             ->exists();
     }
 
+    // Existe algún turno abierto esta semana (para validar acceso de operadores)
+    public function hayTurnoEnSemanaActual(): bool
+    {
+        $inicioSemana = now()->startOfWeek(\Carbon\Carbon::MONDAY)->toDateString();
+        $finSemana    = now()->startOfWeek(\Carbon\Carbon::MONDAY)->addDays(6)->toDateString();
+
+        return Turno::where('tenant_id', currentTenantId())
+            ->where('fecha_inicio', '<=', $finSemana)
+            ->where('fecha_fin', '>=', $inicioSemana)
+            ->exists();
+    }
+
     // Permisos específicos por módulo
     public function puedeAccederUsuarios(): bool
     {
-        return $this->esSuperAdmin() || ($this->esAdmin() && $this->tieneTurnoActivo());
+        if ($this->esSuperAdmin()) return true;
+        if ($this->esAdmin()) return $this->tieneTurnoActivo();
+        return false;
     }
 
     public function puedeAccederProductos(): bool
     {
-        return $this->esSuperAdmin() || ($this->esAdmin() && $this->tieneTurnoActivo());
+        if ($this->esSuperAdmin()) return true;
+        if ($this->esAdmin()) return $this->tieneTurnoActivo();
+        return false;
     }
 
     public function puedeAccederTurnos(): bool
@@ -57,7 +73,14 @@ trait WithPermisos
 
     public function puedeAccederPOS(): bool
     {
-        return $this->esSuperAdmin() || ($this->esAdmin() && $this->tieneTurnoActivo()) || $this->esUser();
+        if ($this->esSuperAdmin()) return true;
+        if ($this->esAdmin()) return $this->tieneTurnoActivo();
+        return $this->hayTurnoEnSemanaActual(); // operador: solo si hay turno abierto
+    }
+
+    public function puedeAccederDashboard(): bool
+    {
+        return $this->esSuperAdmin() || $this->esAdmin();
     }
 
     public function puedeAccederMovimientos(): bool
@@ -70,24 +93,35 @@ trait WithPermisos
         return $this->esSuperAdmin() || $this->esAdmin() || $this->esUser();
     }
 
-    // Solo el superadmin puede eliminar
+    public function puedeAccederSuscripcion(): bool
+    {
+        return $this->esAdmin(); // Solo el admin del tenant ve su suscripción
+    }
+
+    // Solo admin/landlord pueden crear ingresos; operadores solo egresos
+    public function puedeCrearIngreso(): bool
+    {
+        return $this->esSuperAdmin() || $this->esAdmin();
+    }
+
+    // Admin del tenant o landlord pueden eliminar
     public function puedeEliminar(): bool
     {
-        return $this->esSuperAdmin();
+        return $this->esSuperAdmin() || $this->esAdmin();
     }
 
     // Redirige si no tiene acceso (usa en mount de cada componente)
     public function verificarAccesoUsuarios(): void
     {
         if (!$this->puedeAccederUsuarios()) {
-            $this->redirect(route('pos'));
+            $this->redirect($this->esAdmin() ? route('turnos') : route('pos'));
         }
     }
 
     public function verificarAccesoProductos(): void
     {
         if (!$this->puedeAccederProductos()) {
-            $this->redirect(route('pos'));
+            $this->redirect($this->esAdmin() ? route('turnos') : route('pos'));
         }
     }
 
@@ -98,10 +132,17 @@ trait WithPermisos
         }
     }
 
+    public function verificarAccesoDashboard(): void
+    {
+        if (!$this->puedeAccederDashboard()) {
+            $this->redirect(route('ventas'));
+        }
+    }
+
     public function verificarAccesoPOS(): void
     {
         if (!$this->puedeAccederPOS()) {
-            $this->redirect(route('turnos'));
+            $this->redirect($this->esAdmin() ? route('turnos') : route('ventas'));
         }
     }
 
@@ -115,6 +156,13 @@ trait WithPermisos
     public function verificarAccesoVentas(): void
     {
         if (!$this->puedeAccederVentas()) {
+            $this->redirect(route('pos'));
+        }
+    }
+
+    public function verificarAccesoSuscripcion(): void
+    {
+        if (!$this->puedeAccederSuscripcion()) {
             $this->redirect(route('pos'));
         }
     }

@@ -90,6 +90,7 @@ document.addEventListener('livewire:init', () => {
     // Escuchar evento swal:close
     Livewire.on('swal:close', () => {
         Swal.close();
+    });
 });
 
 // Pagination Functions

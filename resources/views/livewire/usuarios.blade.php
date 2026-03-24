@@ -139,6 +139,43 @@
         </div>
     @endif
 
+    {{-- Modal: Confirmar asociación de usuario existente --}}
+    @if($confirmarAsociacion)
+    <div class="modal fade show d-block" tabindex="-1" wire:click.self="cancelarAsociacion" style="background-color:rgba(0,0,0,0.6);">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark border-0 pb-2">
+                    <h5 class="modal-title fw-bold d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-user-plus"></i> Usuario ya registrado
+                    </h5>
+                    <button type="button" class="btn-close" wire:click="cancelarAsociacion"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <div style="font-size:3rem; color:#f0ad4e; margin-bottom:12px;">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <p class="mb-1">El celular ingresado ya pertenece a:</p>
+                    <p class="fw-bold fs-5 mb-3">{{ $nombreExistente }}</p>
+                    <p class="text-muted" style="font-size:0.9rem;">¿Deseas añadirlo a esta tienda como <strong>{{ ucfirst($tipo) }}</strong>?</p>
+                </div>
+                <div class="modal-footer border-0 pt-0 justify-content-center gap-2">
+                    <button type="button" class="btn btn-secondary" wire:click="cancelarAsociacion">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success" wire:click="asociarUsuarioConfirmado" wire:loading.attr="disabled">
+                        <span wire:loading.remove wire:target="asociarUsuarioConfirmado">
+                            <i class="fa-solid fa-user-plus me-1"></i> Sí, asociar
+                        </span>
+                        <span wire:loading wire:target="asociarUsuarioConfirmado">
+                            <i class="fa-solid fa-spinner fa-spin me-1"></i> Asociando...
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     @include('partials.paginate-bar', ['results' => $usuarios, 'storageKey' => 'usuarios'])
 </div>
 

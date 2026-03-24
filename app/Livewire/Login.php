@@ -4,7 +4,7 @@ namespace App\Livewire;
 
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Usuario;
+use App\Models\User;
 use Livewire\Attributes\Layout;
 
 #[Layout('layouts.guest')]
@@ -31,7 +31,7 @@ class Login extends Component
         $this->validate();
 
         // Buscar usuario por celular
-        $usuario = Usuario::where('celular', $this->celular)->first();
+        $usuario = User::where('celular', $this->celular)->first();
 
         if (!$usuario) {
             $this->addError('celular', 'Usuario no encontrado');
@@ -50,7 +50,17 @@ class Login extends Component
         // Regenerar sesión por seguridad
         request()->session()->regenerate();
 
-        // Redirigir a Ventas
+        // Landlord: va al panel de administración (sin tenant en sesión)
+        if ($usuario->isSuperAdmin()) {
+            return redirect()->route('admin.tenants');
+        }
+
+        // Admin/Operador del negocio: auto-asignar primer tenant
+        $tenant = $usuario->tenants()->wherePivot('is_active', true)->first();
+        if ($tenant) {
+            $usuario->switchTenant($tenant->id);
+        }
+
         return redirect()->intended(route('ventas'));
     }
 

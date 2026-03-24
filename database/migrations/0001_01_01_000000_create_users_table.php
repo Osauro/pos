@@ -11,7 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Tabla users eliminada - se usa tabla usuarios en su lugar
+        Schema::create('users', function (Blueprint $table) {
+            $table->id();
+            $table->string('nombre');
+            $table->string('celular', 15)->unique();
+            $table->string('pin');
+            $table->boolean('is_super_admin')->default(false);
+            $table->string('imagen')->nullable();
+            $table->rememberToken();
+            $table->timestamps();
+        });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();
@@ -34,6 +43,7 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::dropIfExists('users');
         Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');
     }

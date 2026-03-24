@@ -63,7 +63,7 @@ class Movimientos extends Component
 
     public function render()
     {
-        $query = Movimiento::with('turno.encargado')->orderBy('id', 'desc');
+        $query = Movimiento::with(['turno.encargado', 'usuario'])->orderBy('id', 'desc');
         $turnos = collect();
 
         // User: solo movimientos de la semana actual
@@ -170,21 +170,40 @@ class Movimientos extends Component
         $mostrarFiltro = !$this->esUser();
 
         return view('livewire.movimientos', compact('movimientos', 'turnos', 'totalIngresos', 'totalEgresos', 'saldoActual', 'mostrarFiltro'))
-            ->with('puedeEliminar', $this->puedeEliminar());
+            ->with('puedeEliminar', $this->puedeEliminar())
+            ->with('puedeCrearIngreso', $this->puedeCrearIngreso());
     }
 
     public function create()
     {
         $this->resetInputFields();
 
+        // Operadores solo pueden crear egresos
+        if (! $this->puedeCrearIngreso()) {
+            $this->tipo_movimiento = 'egreso';
+        }
+
         // Auto-detectar turno activo para el usuario actual
         if ($this->turno_seleccionado) {
             $this->turno_id = $this->turno_seleccionado;
         } else {
-            $turnoActivo = Turno::activo()->where('encargado_id', auth()->id())->first();
+            // Admins buscan su propio turno; operadores usan cualquier turno activo del tenant
+            $turnoActivo = $this->esUser()
+                ? Turno::activo()->latest()->first()
+                : Turno::activo()->where('encargado_id', auth()->id())->first();
             if ($turnoActivo) {
                 $this->turno_id = $turnoActivo->id;
             }
+        }
+
+        // Sin turno: mostrar mensaje y no abrir modal
+        if (!$this->turno_id) {
+            if ($this->esUser()) {
+                $this->swalWarning('Sin turno activo', 'No hay un turno activo. Solicita al administrador que cree un turno.');
+            } else {
+                $this->swalWarning('Sin turno activo', 'No tienes un turno activo. Ve a la sección de Turnos para crear uno.');
+            }
+            return;
         }
 
         // Primer movimiento del día (después de las 2:00) → flujo inicio de caja
@@ -406,6 +425,12 @@ class Movimientos extends Component
             'monto'    => 'required|numeric|min:0.01',
         ]);
 
+        // Operadores solo pueden registrar egresos
+        if ($this->tipo_movimiento === 'ingreso' && ! $this->puedeCrearIngreso()) {
+            $this->addError('monto', 'Solo el administrador puede registrar ingresos.');
+            return;
+        }
+
         // Si no se escribió detalle, usar el tipo de operación como etiqueta
         $detalle = trim($this->detalle) ?: ucfirst($this->tipo_movimiento);
 
@@ -417,10 +442,23 @@ class Movimientos extends Component
             ->first();
 
         $saldoAnterior = $ultimoMovimiento ? $ultimoMovimiento->saldo : 0;
+
+        // Validar que haya saldo suficiente para egresos
+        if ($this->tipo_movimiento === 'egreso' && $saldoAnterior <= 0) {
+            $this->swalWarning('Sin saldo en caja', 'No hay saldo disponible en caja para registrar un egreso.');
+            return;
+        }
+
+        if ($this->tipo_movimiento === 'egreso' && $egreso > $saldoAnterior) {
+            $this->swalWarning('Saldo insuficiente', 'El monto del egreso (Bs. ' . number_format($egreso, 2) . ') supera el saldo en caja (Bs. ' . number_format($saldoAnterior, 2) . ').');
+            return;
+        }
+
         $nuevoSaldo    = $saldoAnterior + $ingreso - $egreso;
 
         Movimiento::create([
             'turno_id' => $this->turno_id,
+            'user_id'  => auth()->id(),
             'detalle'  => $detalle,
             'ingreso'  => $ingreso,
             'egreso'   => $egreso,

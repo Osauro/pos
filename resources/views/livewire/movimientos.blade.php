@@ -19,7 +19,7 @@
                                         <i class="fa-solid fa-calendar-days"></i>
                                     </button>
                                 @endif
-                                @if(auth()->user()->tipo === 'admin')
+                                @if(auth()->check())
                                     <button class="btn btn-primary" wire:click="create">
                                         <i class="fa-solid fa-plus"></i>
                                     </button>
@@ -103,7 +103,7 @@
                                                     class="text-muted">{{ $movimiento->created_at->format('H:i') }}</small>
                                             </td>
                                             <td class="text-truncate">
-                                                <small class="text-muted d-block">{{ $movimiento->turno->encargado->nombre ?? 'N/A' }}</small>
+                                                <small class="text-muted d-block">{{ $movimiento->usuario->nombre ?? $movimiento->turno->encargado->nombre ?? 'N/A' }}</small>
                                                 <span>{{ $movimiento->detalle }}</span>
                                             </td>
                                             <td class="text-end text-truncate">
@@ -199,6 +199,7 @@
                             {{-- Tipo de Movimiento: botones toggle --}}
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Tipo de Movimiento</label>
+                                @if($puedeCrearIngreso)
                                 <div class="btn-group w-100" role="group">
                                     <button type="button"
                                         class="btn {{ $tipo_movimiento === 'egreso' ? 'btn-danger' : 'btn-outline-danger' }}"
@@ -211,6 +212,13 @@
                                         <i class="fa-solid fa-arrow-up me-1"></i> Ingreso
                                     </button>
                                 </div>
+                                @else
+                                <div>
+                                    <span class="btn btn-danger w-100 disabled">
+                                        <i class="fa-solid fa-arrow-down me-1"></i> Egreso
+                                    </span>
+                                </div>
+                                @endif
                             </div>
 
                             {{-- Monto primero con autofocus --}}

@@ -38,7 +38,7 @@ class TicketController extends Controller
         $items = $venta->items->filter(fn($item) => $item->producto)->values();
 
         $width      = config('printer.width', 80);
-        $negocio    = config('printer.negocio', 'Mi Negocio');
+        $negocio    = \App\Helpers\TenantHelper::current()?->nombre ?? 'Mi Negocio';
         $soloTicket = $request->boolean('nocomanda');
 
         $logoBase64 = null;
@@ -67,7 +67,7 @@ class TicketController extends Controller
 
         $items   = $venta->items->filter(fn($item) => $item->producto)->values();
         $width   = config('printer.width', 80);
-        $negocio = config('printer.negocio', 'Mi Negocio');
+        $negocio = \App\Helpers\TenantHelper::current()?->nombre ?? 'Mi Negocio';
 
         // Ancho papel en puntos tipográficos (1pt = 1/72 in)
         $paperW = $width === 58 ? 164.41 : 226.77;  // 58 mm ó 80 mm

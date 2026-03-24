@@ -3,7 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\Turno;
-use App\Models\Usuario;
+use App\Models\User;
 use App\Traits\WithSwal;
 use App\Traits\WithPermisos;
 use Livewire\Component;
@@ -20,7 +20,7 @@ class Turnos extends Component
     public $perPage = 10;
 
     protected $rules = [
-        'encargado_id' => 'required|exists:usuarios,id',
+        'encargado_id' => 'required|exists:users,id',
         'fecha_inicio' => 'required|date',
         'fecha_fin' => 'required|date|after_or_equal:fecha_inicio',
     ];
@@ -44,7 +44,11 @@ class Turnos extends Component
             ->orderBy('fecha_inicio', 'desc')
             ->paginate($this->perPage);
 
-        $usuarios = Usuario::where('tipo', 'admin')->get();
+        $usuarios = User::whereHas('tenants', function ($q) {
+                $q->where('tenants.id', currentTenantId())
+                  ->where('tenant_user.role', 'admin')
+                  ->where('tenant_user.is_active', true);
+            })->get();
 
         return view('livewire.turnos', compact('turnos', 'usuarios'));
     }

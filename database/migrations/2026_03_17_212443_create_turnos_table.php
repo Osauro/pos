@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('turnos', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('encargado_id')->constrained('usuarios')->onDelete('cascade');
+            $table->foreignId('encargado_id')->constrained('users')->onDelete('cascade');
             $table->date('fecha_inicio');
             $table->date('fecha_fin');
             $table->timestamps();

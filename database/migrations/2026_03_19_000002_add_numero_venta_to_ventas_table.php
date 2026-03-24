@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('ventas', function (Blueprint $table) {
-            $table->unsignedInteger('numero_venta')->nullable()->after('id');
-        });
+        if (!Schema::hasColumn('ventas', 'numero_venta')) {
+            Schema::table('ventas', function (Blueprint $table) {
+                $table->unsignedInteger('numero_venta')->nullable()->after('id');
+            });
+        }
     }
 
     /**

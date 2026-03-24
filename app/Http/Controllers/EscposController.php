@@ -6,7 +6,7 @@ use App\Models\Venta;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Mike42\Escpos\Printer;
-use Mike42\Escpos\PrintConnectors\BufferPrintConnector;
+use Mike42\Escpos\PrintConnectors\DummyPrintConnector;
 
 class EscposController extends Controller
 {
@@ -20,10 +20,10 @@ class EscposController extends Controller
 
         $items   = $venta->items->filter(fn($i) => $i->producto)->values();
         $width   = config('printer.width', 80);
-        $negocio = config('printer.negocio', 'Mi Negocio');
+        $negocio = \App\Helpers\TenantHelper::current()?->nombre ?? 'Mi Negocio';
         $cols    = $width === 58 ? 32 : 42;
 
-        $connector = new BufferPrintConnector();
+        $connector = new DummyPrintConnector();
         $printer   = new Printer($connector);
 
         // ── Cabecera ──────────────────────────────────────────────────
@@ -91,9 +91,11 @@ class EscposController extends Controller
 
         $printer->feed(3);
         $printer->cut();
+
+        $data = $connector->getData();
         $printer->close();
 
-        return response($connector->getData(), 200, [
+        return response($data, 200, [
             'Content-Type'        => 'application/octet-stream',
             'Content-Disposition' => "attachment; filename=\"ticket-{$venta->numero_venta}.bin\"",
         ]);
@@ -114,7 +116,7 @@ class EscposController extends Controller
         $width = config('printer.width', 80);
         $cols  = $width === 58 ? 32 : 42;
 
-        $connector = new BufferPrintConnector();
+        $connector = new DummyPrintConnector();
         $printer   = new Printer($connector);
 
         // ── Cabecera comanda ──────────────────────────────────────────
@@ -152,9 +154,11 @@ class EscposController extends Controller
 
         $printer->feed(3);
         $printer->cut();
+
+        $data = $connector->getData();
         $printer->close();
 
-        return response($connector->getData(), 200, [
+        return response($data, 200, [
             'Content-Type'        => 'application/octet-stream',
             'Content-Disposition' => "attachment; filename=\"comanda-{$venta->numero_venta}.bin\"",
         ]);

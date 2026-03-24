@@ -97,31 +97,33 @@
                     <div class="modal-body">
                         <form wire:submit.prevent="{{ $producto_id ? 'update' : 'store' }}">
                             <div class="row">
-                                <!-- Columna izquierda: Imagen clickeable -->
+                                <!-- Columna izquierda: Imagen con galería -->
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label">Imagen del Producto</label>
-                                    <div class="border rounded p-2 text-center position-relative"
-                                        style="min-height: 160px; display: flex; align-items: center; justify-content: center; background-color: #f8f9fa; cursor: pointer;"
-                                        onclick="document.getElementById('new_imagen').click()">
-                                        @if ($new_imagen)
-                                            <img src="{{ $new_imagen->temporaryUrl() }}" alt="Preview"
-                                                style="max-width: 100%; max-height: 300px; object-fit: contain; border-radius: 8px;">
-                                        @elseif($imagen)
-                                            <img src="{{ asset('storage/' . $imagen) }}" alt="Imagen actual"
-                                                style="max-width: 100%; max-height: 300px; object-fit: contain; border-radius: 8px;">
+                                    <div style="border: 2px dashed #ccc; border-radius: 8px; padding: 15px; text-align: center; height: 320px; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #f8f9fa;">
+                                        @if ($imagen_preview_url)
+                                            <img src="{{ $imagen_preview_url }}" alt="Preview"
+                                                style="max-width: 100%; max-height: 230px; object-fit: contain; border-radius: 6px; margin-bottom: 10px;">
+                                        @elseif ($producto_id && $producto_actual && $producto_actual->imagen)
+                                            <img src="{{ $producto_actual->photo_url }}" alt="Producto"
+                                                style="max-width: 100%; max-height: 230px; object-fit: contain; border-radius: 6px; margin-bottom: 10px;">
                                         @else
-                                            <div class="text-center">
-                                                <i class="fa-solid fa-cloud-arrow-up fa-4x text-muted mb-2"></i>
-                                                <p class="text-muted small mb-0">Click para seleccionar imagen</p>
+                                            <div class="text-muted mb-3">
+                                                <i class="fa-solid fa-image fa-3x mb-2 opacity-50"></i>
+                                                <p class="mb-0 small">Sin imagen seleccionada</p>
                                             </div>
                                         @endif
+                                        <button type="button"
+                                                class="btn btn-outline-primary btn-sm mt-2"
+                                                wire:click="abrirGaleria">
+                                            <i class="fa-solid fa-images me-1"></i>
+                                            @if ($imagen_preview_url || ($producto_id && $producto_actual?->imagen))
+                                                Cambiar imagen
+                                            @else
+                                                Seleccionar imagen
+                                            @endif
+                                        </button>
                                     </div>
-                                    <!-- Input file oculto -->
-                                    <input type="file" class="d-none" wire:model="new_imagen" id="new_imagen"
-                                        accept="image/*">
-                                    @error('new_imagen')
-                                        <div class="text-danger small mt-1">{{ $message }}</div>
-                                    @enderror
                                 </div>
 
                                 <!-- Columna derecha: Inputs -->
@@ -197,4 +199,7 @@
     @endif
 
     @include('partials.paginate-bar', ['results' => $productos, 'storageKey' => 'productos'])
+
+    <!-- Componente Galería Modal -->
+    <livewire:galeria-modal />
 </div>

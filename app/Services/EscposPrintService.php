@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Venta;
 use Mike42\Escpos\Printer;
+use Mike42\Escpos\CapabilityProfile;
 use Mike42\Escpos\PrintConnectors\DummyPrintConnector;
 
 /**
@@ -174,14 +175,17 @@ class EscposPrintService
         };
 
         $connector = new DummyPrintConnector();
-        $printer   = new Printer($connector);
+        $profile   = CapabilityProfile::load('simple');
+        $printer   = new Printer($connector, $profile);
 
+        try {
         // Nombre del negocio en texto (solo cuando no hay logo configurado)
         if (!config('printer.logo')) {
             $printer->setJustification(Printer::JUSTIFY_CENTER);
             $printer->setEmphasis(true);
             $printer->setTextSize(2, 1);
-            $printer->text(mb_strtoupper(config('printer.negocio', 'MI NEGOCIO')) . "\n");
+            $tenantNombre = \App\Helpers\TenantHelper::current()?->nombre ?? 'MI NEGOCIO';
+            $printer->text(mb_strtoupper($tenantNombre) . "\n");
             $printer->setTextSize(1, 1);
             $printer->setEmphasis(false);
         }
@@ -242,7 +246,9 @@ class EscposPrintService
         $printer->cut(Printer::CUT_PARTIAL);
 
         $bytes = $connector->getData();
-        $printer->close();
+        } finally {
+            $printer->close();
+        }
 
         // chr(1) = Go agrega logo; chr(0) = sin logo (ya se imprimió el nombre en texto)
         return (config('printer.logo') ? chr(1) : chr(0)) . $bytes;
@@ -259,8 +265,10 @@ class EscposPrintService
         $colsDobl = intdiv($cols, 2); // cols efectivas con setTextSize(2,2)
 
         $connector = new DummyPrintConnector();
-        $printer   = new Printer($connector);
+        $profile   = CapabilityProfile::load('simple');
+        $printer   = new Printer($connector, $profile);
 
+        try {
         // Cabecera: VENTA #{} centrado en doble tamaño
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
@@ -304,7 +312,9 @@ class EscposPrintService
         $printer->cut(Printer::CUT_PARTIAL);
 
         $bytes = $connector->getData();
-        $printer->close();
+        } finally {
+            $printer->close();
+        }
 
         // Byte 0x00 = indicar a Go que NO agregue el logo local
         return chr(0) . $bytes;

@@ -11,22 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('usuarios', function (Blueprint $table) {
-            $table->id();
-            $table->string('nombre');
-            $table->integer('celular');
-            $table->string('pin');
-            $table->enum('tipo', ['admin', 'user'])->default('user');
-            $table->rememberToken();
-            $table->timestamps();
-        });
+        // Tabla usuarios reemplazada por users + pivot tenant_user
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('usuarios');
+        // no-op
     }
 };

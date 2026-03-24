@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Models\GaleriaImagen;
 use App\Models\Producto;
 use App\Traits\WithSwal;
 use App\Traits\WithPermisos;
@@ -18,6 +19,16 @@ class Productos extends Component
     public $isOpen = false;
     public $new_imagen;
     public $perPage = 10;
+
+    // Galería / Imagen
+    public $imagen_preview_url;
+    public $galeria_id_seleccionado;
+    public $producto_actual;
+
+    protected $listeners = [
+        'deleteProduct',
+        'imagen-seleccionada' => 'imagenSeleccionada',
+    ];
 
     protected $rules = [
         'nombre' => 'required|string|max:255',
@@ -46,22 +57,33 @@ class Productos extends Component
         $this->isOpen = true;
     }
 
+    public function abrirGaleria(): void
+    {
+        $this->dispatch('abrir-galeria', busqueda: trim($this->nombre ?? ''));
+    }
+
+    public function imagenSeleccionada(int $id, string $url, string $path): void
+    {
+        $this->galeria_id_seleccionado = $id;
+        $this->imagen = $path;
+        $this->imagen_preview_url = $url;
+    }
+
     public function store()
     {
         $this->validate();
 
-        $imagePath = null;
-        if ($this->new_imagen) {
-            $imagePath = $this->new_imagen->store('productos', 'public');
-        }
-
-        Producto::create([
+        $producto = Producto::create([
             'nombre' => $this->nombre,
-            'imagen' => $imagePath,
+            'imagen' => $this->imagen,
             'precio' => $this->precio,
             'tipo' => $this->tipo,
-            'estado' => true // Por defecto activo
+            'estado' => true,
         ]);
+
+        if ($this->galeria_id_seleccionado) {
+            $this->actualizarGaleria($this->galeria_id_seleccionado);
+        }
 
         $this->showSuccessNotification('Producto creado exitosamente');
         $this->closeModal();
@@ -71,8 +93,11 @@ class Productos extends Component
     {
         $producto = Producto::findOrFail($id);
         $this->producto_id = $id;
+        $this->producto_actual = $producto;
         $this->nombre = $producto->nombre;
-        $this->imagen = $producto->imagen;
+        $this->imagen = null;
+        $this->imagen_preview_url = null;
+        $this->galeria_id_seleccionado = null;
         $this->precio = $producto->precio;
         $this->tipo = $producto->tipo;
 
@@ -88,8 +113,9 @@ class Productos extends Component
         $producto->precio = $this->precio;
         $producto->tipo = $this->tipo;
 
-        if ($this->new_imagen) {
-            $producto->imagen = $this->new_imagen->store('productos', 'public');
+        if ($this->galeria_id_seleccionado && $this->imagen) {
+            $producto->imagen = $this->imagen;
+            $this->actualizarGaleria($this->galeria_id_seleccionado);
         }
 
         $producto->save();
@@ -126,12 +152,30 @@ class Productos extends Component
         $this->resetInputFields();
     }
 
+    private function actualizarGaleria(int $galeriaImagenId): void
+    {
+        $galeria = GaleriaImagen::find($galeriaImagenId);
+        if (!$galeria) return;
+
+        $galeria->increment('veces_usado');
+        $galeria->mergeTags([trim($this->nombre)]);
+
+        if (!$galeria->nombre) {
+            $galeria->nombre = trim($this->nombre);
+        }
+
+        $galeria->save();
+    }
+
     private function resetInputFields()
     {
         $this->producto_id = null;
+        $this->producto_actual = null;
         $this->nombre = '';
         $this->imagen = null;
         $this->new_imagen = null;
+        $this->imagen_preview_url = null;
+        $this->galeria_id_seleccionado = null;
         $this->precio = '';
         $this->tipo = '';
         $this->resetValidation();

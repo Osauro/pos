@@ -3,7 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\Venta;
-use App\Models\Usuario;
+use App\Models\User;
 use App\Models\Turno;
 use App\Traits\WithSwal;
 use App\Traits\WithPermisos;

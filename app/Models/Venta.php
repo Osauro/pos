@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Helpers\TenantHelper;
 use Illuminate\Database\Eloquent\Model;
 
 class Venta extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'user_id',
         'turno_id',
         'numero_venta',
@@ -16,8 +18,25 @@ class Venta extends Model
         'efectivo',
         'online',
         'credito',
-        'estado'
+        'estado',
     ];
+
+    protected static function booted(): void
+    {
+        // Filtrar siempre por tenant (omitir en CLI: seeders / migraciones)
+        static::addGlobalScope('tenant', function ($query) {
+            if (app()->runningInConsole()) return;
+            $table = $query->getModel()->getTable();
+            $query->where("{$table}.tenant_id", TenantHelper::currentId() ?? 0);
+        });
+
+        // Asignar tenant automáticamente al crear
+        static::creating(function ($model) {
+            if (!$model->tenant_id) {
+                $model->tenant_id = TenantHelper::currentId();
+            }
+        });
+    }
 
     protected $casts = [
         'fecha_hora' => 'datetime',
@@ -29,12 +48,12 @@ class Venta extends Model
 
     public function usuario()
     {
-        return $this->belongsTo(Usuario::class, 'user_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function user()
     {
-        return $this->belongsTo(Usuario::class, 'user_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function turno()
@@ -54,7 +73,6 @@ class Venta extends Model
 
     public function cliente()
     {
-        // Relación temporal - ajustar según tu estructura
-        return $this->belongsTo(Usuario::class, 'cliente_id');
+        return $this->belongsTo(User::class, 'cliente_id');
     }
 }

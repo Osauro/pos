@@ -46,8 +46,9 @@
     <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}" />
 
     @php
-        $themeNumber = 3;
-        $themeColor = '#29adb2';
+        $currentTenant  = currentTenant();
+        $themeNumber    = $currentTenant?->theme_number ?? 3;
+        $themeColor     = $currentTenant?->themeColor() ?? '#29adb2';
     @endphp
 
     <link id="color" rel="stylesheet" href="{{ asset('assets/css/color-' . $themeNumber . '.css') }}?v={{ time() }}" media="screen" />
@@ -197,9 +198,9 @@
         }
 
         $(document).ready(function () {
-            localStorage.setItem("color", 'color-3');
-            localStorage.setItem("primary", '#29adb2');
-            localStorage.setItem("secondary", '#29adb2');
+            localStorage.setItem("color", 'color-{{ $themeNumber }}');
+            localStorage.setItem("primary", '{{ $themeColor }}');
+            localStorage.setItem("secondary", '{{ $themeColor }}');
         });
 
         // Restringir fechas futuras en todos los inputs de tipo date - GLOBAL
@@ -456,6 +457,7 @@
         }, 2000);
     </script>
 
+    @stack('modals')
     @livewireScripts
 </body>
 

@@ -2,17 +2,36 @@
 
 namespace App\Models;
 
+use App\Helpers\TenantHelper;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class Turno extends Model
 {
     protected $fillable = [
+        'tenant_id',
         'encargado_id',
         'fecha_inicio',
         'fecha_fin',
         'estado',
     ];
+
+    protected static function booted(): void
+    {
+        // Filtrar siempre por tenant (omitir en CLI: seeders / migraciones)
+        static::addGlobalScope('tenant', function ($query) {
+            if (app()->runningInConsole()) return;
+            $table = $query->getModel()->getTable();
+            $query->where("{$table}.tenant_id", TenantHelper::currentId() ?? 0);
+        });
+
+        // Asignar tenant automáticamente al crear
+        static::creating(function ($model) {
+            if (!$model->tenant_id) {
+                $model->tenant_id = TenantHelper::currentId();
+            }
+        });
+    }
 
     protected $casts = [
         'fecha_inicio' => 'date',
@@ -48,7 +67,7 @@ class Turno extends Model
 
     public function encargado()
     {
-        return $this->belongsTo(Usuario::class, 'encargado_id');
+        return $this->belongsTo(User::class, 'encargado_id');
     }
 
     public function movimientos()

@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use App\Livewire\Suscripcion;
+use App\Livewire\HomeTenant;
 use App\Livewire\Usuarios;
 use App\Livewire\Productos;
 use App\Livewire\Turnos;
@@ -9,48 +11,77 @@ use App\Livewire\Movimientos;
 use App\Livewire\Ventas;
 use App\Livewire\Pos;
 use App\Livewire\Login;
+use App\Livewire\Admin\TenantsManager;
+use App\Livewire\Admin\HomeLandlord;
+use App\Livewire\Admin\PagosManager;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\EscposController;
 
-// Rutas públicas (login)
+// -- Rutas p�blicas ------------------------------------------------------------
 Route::get('/login', Login::class)->name('login')->middleware('guest');
 
 Route::post('/logout', function () {
     Auth::logout();
+    \App\Helpers\TenantHelper::clear();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
     return redirect('/login');
 })->name('logout');
 
-// Rutas protegidas con autenticación
-Route::middleware(['auth'])->group(function () {
-    // Redirigir raíz al POS
-    Route::get('/', function () {
-        return redirect('/pos');
+Route::post('/tenant/switch', function () {
+    $tenantId = (int) request('tenant_id');
+    if (auth()->check() && auth()->user()->switchTenant($tenantId)) {
+        // Si viene con redirect explícito (ej: desde landlord panel), usarlo
+        $redirectTo = request('redirect') ?? route('ventas');
+        return redirect($redirectTo);
+    }
+    return redirect()->back()->with('error', 'No puedes cambiar a ese negocio.');
+})->name('tenant.switch')->middleware('auth');
+
+// -- Panel del Landlord (super admin del sistema) ------------------------------
+Route::middleware(['auth', 'landlord'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard', HomeLandlord::class)->name('dashboard');
+    Route::get('/negocios',  TenantsManager::class)->name('tenants');
+    Route::get('/pagos',     PagosManager::class)->name('pagos');
+});
+
+// -- Crear tienda (cualquier usuario autenticado) ----------------------------
+Route::get('/crear-tienda', \App\Livewire\Admin\CrearTienda::class)->name('crear-tienda')->middleware('auth');
+
+// -- Rutas del negocio (requieren tenant activo en sesi�n) ---------------------
+Route::middleware(['auth', 'tenant'])->group(function () {
+    Route::get('/', fn() => redirect()->route('dashboard'));
+
+    // Dashboard tenant
+    Route::get('/dashboard', HomeTenant::class)->name('dashboard');
+
+    // Gesti�n (solo admin/landlord)
+    Route::middleware(['tenant.manage'])->group(function () {
+        Route::get('/usuarios',     Usuarios::class)->name('usuarios');
+        Route::get('/productos',    Productos::class)->name('productos');
+        Route::get('/turnos',       Turnos::class)->name('turnos');
     });
 
-    // Rutas del sistema
-    Route::get('/usuarios', Usuarios::class)->name('usuarios');
-    Route::get('/productos', Productos::class)->name('productos');
-    Route::get('/turnos', Turnos::class)->name('turnos');
-    Route::get('/movimientos', Movimientos::class)->name('movimientos');
-    Route::get('/ventas', Ventas::class)->name('ventas');
-    Route::get('/pos', Pos::class)->name('pos');
+    // Suscripción: accesible aunque el tenant esté inactivo (para mostrar QR de pago)
+    Route::get('/suscripcion',  Suscripcion::class)->name('suscripcion');
 
-    // Tickets / Comandas (también accesibles en nueva pestaña como fallback)
+    // Movimientos: accesible por admin y operadores (restricciones internas en el componente)
+    Route::get('/movimientos', Movimientos::class)->name('movimientos');
+
+    // Acceso general (admin + operador)
+    Route::get('/ventas', Ventas::class)->name('ventas');
+    Route::get('/pos',    Pos::class)->name('pos');
+
+    // Tickets
     Route::get('/ticket/comanda/{venta}',     [TicketController::class, 'comanda'])->name('ticket.comanda');
     Route::get('/ticket/cliente/{venta}',     [TicketController::class, 'cliente'])->name('ticket.cliente');
     Route::get('/ticket/venta/{venta}',       [TicketController::class, 'venta'])->name('ticket.venta');
-    // Versiones PDF (para impresión en móvil)
     Route::get('/ticket/cliente/{venta}/pdf', [TicketController::class, 'clientePdf'])->name('ticket.cliente.pdf');
     Route::get('/ticket/comanda/{venta}/pdf', [TicketController::class, 'comandaPdf'])->name('ticket.comanda.pdf');
 });
 
-// ── ESC/POS directo (agente print-agent.php) ──────────────────────────────────
-// Protegido por token (X-Printer-Token header o ?_pt=...)
-// Solo accesible desde la máquina local (el agente corre en el mismo equipo)
+// -- ESC/POS directo (agente print-agent) -------------------------------------
 Route::prefix('escpos')->group(function () {
     Route::get('/ticket/{venta}',  [EscposController::class, 'ticket'])->name('escpos.ticket');
     Route::get('/comanda/{venta}', [EscposController::class, 'comanda'])->name('escpos.comanda');
 });
-
