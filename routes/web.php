@@ -54,6 +54,15 @@ Route::get('/manifest.webmanifest', function () {
         ->header('Content-Type', 'application/manifest+json');
 })->name('pwa.manifest');
 
+// -- Descarga agente de impresión ----------------------------------------------
+Route::get('/download/printpos', function () {
+    $path = public_path('printPOS.zip');
+    abort_unless(file_exists($path), 404);
+    return response()->download($path, 'printPOS.zip', [
+        'Content-Type' => 'application/zip',
+    ]);
+})->name('download.printpos')->middleware('auth');
+
 // -- Rutas p�blicas ------------------------------------------------------------
 Route::get('/login', Login::class)->name('login')->middleware('guest');
 

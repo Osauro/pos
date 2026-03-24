@@ -18,6 +18,14 @@ class Suscripcion extends Component
     public string $notasPago = '';
     public bool $pagoEnviado = false;
 
+    // Datos del negocio editables
+    public string $editNombre    = '';
+    public string $editTelefono  = '';
+    public string $editDireccion = '';
+
+    // Tema
+    public int $themeNumber = 3;
+
     public function mount(): void
     {
         // Permitir acceso también cuando el tenant está inactivo (para mostrar QR y subir comprobante)
@@ -25,6 +33,49 @@ class Suscripcion extends Component
         if ($tenant && $tenant->isActivo()) {
             $this->verificarAccesoSuscripcion();
         }
+
+        if ($tenant) {
+            $this->editNombre    = $tenant->nombre    ?? '';
+            $this->editTelefono  = $tenant->telefono  ?? '';
+            $this->editDireccion = $tenant->direccion ?? '';
+            $this->themeNumber   = $tenant->theme_number ?? 3;
+        }
+    }
+
+    public function guardarDatos(): void
+    {
+        $this->validate([
+            'editNombre'    => 'required|string|max:100',
+            'editTelefono'  => 'nullable|string|max:20',
+            'editDireccion' => 'nullable|string|max:255',
+        ], [
+            'editNombre.required' => 'El nombre del negocio es obligatorio.',
+        ]);
+
+        $tenant = currentTenant();
+        if (! $tenant) return;
+
+        $tenant->update([
+            'nombre'    => $this->editNombre,
+            'telefono'  => $this->editTelefono ?: null,
+            'direccion' => $this->editDireccion ?: null,
+        ]);
+
+        $this->showSuccessNotification('Datos del negocio actualizados.');
+    }
+
+    public function guardarTheme(): void
+    {
+        $this->validate([
+            'themeNumber' => 'required|integer|in:2,3,4,5,6,7,8,9,10',
+        ]);
+
+        $tenant = currentTenant();
+        if (! $tenant) return;
+
+        $tenant->update(['theme_number' => $this->themeNumber]);
+
+        $this->showSuccessNotification('Color del tema actualizado.');
     }
 
     public function enviarComprobante(): void

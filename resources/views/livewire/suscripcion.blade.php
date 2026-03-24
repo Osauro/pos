@@ -226,32 +226,28 @@
                                         </h6>
                                     </div>
                                     <div class="card-body py-3">
-                                        <table class="table table-borderless mb-0" style="font-size:0.9rem;">
-                                            <tr>
-                                                <td class="text-muted ps-0" style="width:35%;">Nombre</td>
-                                                <td class="fw-semibold">{{ $tenant->nombre }}</td>
-                                            </tr>
-                                            @if($tenant->telefono)
-                                            <tr>
-                                                <td class="text-muted ps-0">Teléfono</td>
-                                                <td>{{ $tenant->telefono }}</td>
-                                            </tr>
-                                            @endif
-                                            @if($tenant->direccion)
-                                            <tr>
-                                                <td class="text-muted ps-0">Dirección</td>
-                                                <td>{{ $tenant->direccion }}</td>
-                                            </tr>
-                                            @endif
-                                            <tr>
-                                                <td class="text-muted ps-0">ID</td>
-                                                <td><code>#{{ $tenant->id }}</code></td>
-                                            </tr>
-                                            <tr>
-                                                <td class="text-muted ps-0">Registro</td>
-                                                <td>{{ $tenant->created_at->format('d/m/Y') }}</td>
-                                            </tr>
-                                        </table>
+                                        <div class="mb-2">
+                                            <label class="form-label small fw-semibold mb-1">Nombre <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control form-control-sm @error('editNombre') is-invalid @enderror"
+                                                wire:model="editNombre" placeholder="Nombre del negocio">
+                                            @error('editNombre') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label small fw-semibold mb-1">Teléfono</label>
+                                            <input type="text" class="form-control form-control-sm"
+                                                wire:model="editTelefono" placeholder="Ej: 73010688">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-semibold mb-1">Dirección</label>
+                                            <input type="text" class="form-control form-control-sm"
+                                                wire:model="editDireccion" placeholder="Ej: Av. Principal #123">
+                                        </div>
+                                        <button wire:click="guardarDatos" wire:loading.attr="disabled"
+                                            class="btn btn-primary btn-sm w-100">
+                                            <span wire:loading wire:target="guardarDatos" class="spinner-border spinner-border-sm me-1"></span>
+                                            <i wire:loading.remove wire:target="guardarDatos" class="fa-solid fa-floppy-disk me-1"></i>
+                                            Guardar datos
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -296,6 +292,86 @@
                                                 Contactar por WhatsApp
                                             </a>
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Personalización del tema --}}
+                        <div class="row g-3 mt-1">
+                            <div class="col-12 col-md-6">
+                                <div class="card border-0 shadow-sm">
+                                    <div class="card-header bg-light py-2">
+                                        <h6 class="mb-0 fw-bold">
+                                            <i class="fa-solid fa-palette me-2 text-primary"></i>Color del tema
+                                        </h6>
+                                    </div>
+                                    <div class="card-body py-3">
+                                        @php
+                                            $coloresTema = [
+                                                2  => ['hex' => '#f73164', 'nombre' => 'Rosa'],
+                                                3  => ['hex' => '#29adb2', 'nombre' => 'Teal'],
+                                                4  => ['hex' => '#6610f2', 'nombre' => 'Púrpura'],
+                                                5  => ['hex' => '#dc3545', 'nombre' => 'Rojo'],
+                                                6  => ['hex' => '#f57f17', 'nombre' => 'Naranja'],
+                                                7  => ['hex' => '#0288d1', 'nombre' => 'Azul'],
+                                                8  => ['hex' => '#00897b', 'nombre' => 'Verde agua'],
+                                                9  => ['hex' => '#558b2f', 'nombre' => 'Verde'],
+                                                10 => ['hex' => '#455a64', 'nombre' => 'Gris azul'],
+                                            ];
+                                        @endphp
+                                        <div class="d-flex flex-wrap gap-2 mb-3">
+                                            @foreach($coloresTema as $num => $c)
+                                            <button type="button"
+                                                wire:click="$set('themeNumber', {{ $num }})"
+                                                title="{{ $c['nombre'] }}"
+                                                class="rounded-circle border-0 p-0"
+                                                style="width:36px; height:36px; background:{{ $c['hex'] }}; cursor:pointer; outline: {{ $themeNumber == $num ? '3px solid #333' : '2px solid transparent' }}; outline-offset: 2px; transition: outline 0.15s;">
+                                            </button>
+                                            @endforeach
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2 mb-3">
+                                            @php $colorActual = $coloresTema[$themeNumber] ?? $coloresTema[3]; @endphp
+                                            <span class="rounded-circle d-inline-block border"
+                                                style="width:20px; height:20px; background:{{ $colorActual['hex'] }};"></span>
+                                            <small class="text-muted">{{ $colorActual['nombre'] }} — <code>{{ $colorActual['hex'] }}</code></small>
+                                        </div>
+                                        <button wire:click="guardarTheme" wire:loading.attr="disabled"
+                                            class="btn btn-primary btn-sm w-100">
+                                            <span wire:loading wire:target="guardarTheme" class="spinner-border spinner-border-sm me-1"></span>
+                                            <i wire:loading.remove wire:target="guardarTheme" class="fa-solid fa-floppy-disk me-1"></i>
+                                            Aplicar color
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Descarga agente de impresión --}}
+                            <div class="col-12 col-md-6">
+                                <div class="card border-0 shadow-sm">
+                                    <div class="card-header bg-light py-2">
+                                        <h6 class="mb-0 fw-bold">
+                                            <i class="fa-solid fa-print me-2 text-primary"></i>Agente de impresión
+                                        </h6>
+                                    </div>
+                                    <div class="card-body py-3">
+                                        <p class="text-muted mb-2" style="font-size:0.85rem;">
+                                            Descarga e instala el agente <strong>PrintPOS</strong> en tu computadora para imprimir tickets directamente desde el navegador sin configuración extra.
+                                        </p>
+                                        <ul class="text-muted mb-3" style="font-size:0.82rem; padding-left:1.2rem;">
+                                            <li>Extrae el ZIP en cualquier carpeta</li>
+                                            <li>Ejecuta <code>abrir-configurador.bat</code></li>
+                                            <li>Selecciona tu impresora y guarda</li>
+                                            <li>Activa el inicio automático con Windows</li>
+                                        </ul>
+                                        <a href="{{ route('download.printpos') }}"
+                                           class="btn btn-dark btn-sm w-100 d-flex align-items-center justify-content-center gap-2">
+                                            <i class="fa-solid fa-download"></i>
+                                            Descargar printPOS.zip
+                                        </a>
+                                        <small class="text-muted d-block text-center mt-2">
+                                            Solo para Windows &nbsp;·&nbsp; Compatible con impresoras ESC/POS
+                                        </small>
                                     </div>
                                 </div>
                             </div>
