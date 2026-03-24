@@ -54,16 +54,12 @@ trait WithPermisos
     // Permisos específicos por módulo
     public function puedeAccederUsuarios(): bool
     {
-        if ($this->esSuperAdmin()) return true;
-        if ($this->esAdmin()) return $this->tieneTurnoActivo();
-        return false;
+        return $this->esSuperAdmin() || $this->esAdmin();
     }
 
     public function puedeAccederProductos(): bool
     {
-        if ($this->esSuperAdmin()) return true;
-        if ($this->esAdmin()) return $this->tieneTurnoActivo();
-        return false;
+        return $this->esSuperAdmin() || $this->esAdmin();
     }
 
     public function puedeAccederTurnos(): bool

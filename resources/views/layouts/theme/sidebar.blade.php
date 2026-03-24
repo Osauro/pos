@@ -18,7 +18,7 @@
                                     ->where('fecha_inicio', '<=', $finSemana)
                                     ->where('fecha_fin', '>=', $inicioSemana)
                                     ->exists();
-            $puedeGestionar   = $esAdmin && $turnoActivo;   // Admin sin turno: NO ve usuarios/productos
+            $puedeGestionar   = $esAdmin;                   // Admin siempre puede gestionar usuarios/productos
             $puedePOS         = $esAdmin ? $turnoActivo : $turnoSemana; // Operador: necesita turno abierto
             $puedeDashboard   = $esAdmin;            // Solo admin ve el dashboard
             $puedeTurnos      = $esAdmin;                   // Siempre visible para admin
