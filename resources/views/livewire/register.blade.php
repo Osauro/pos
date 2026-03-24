@@ -39,7 +39,9 @@
                        wire:model="celular"
                        maxlength="8"
                        placeholder="76543210"
-                       inputmode="numeric">
+                       inputmode="numeric"
+                       pattern="[0-9]*"
+                       oninput="this.value = this.value.replace(/[^0-9]/g, '')">
             </div>
             @error('celular')
                 <div class="text-danger mt-2" style="font-size:.875rem;">
@@ -64,7 +66,9 @@
                        wire:model="pin"
                        maxlength="4"
                        placeholder="••••"
-                       inputmode="numeric">
+                       inputmode="numeric"
+                       pattern="[0-9]*"
+                       oninput="this.value = this.value.replace(/[^0-9]/g, '')">
             </div>
             @error('pin')
                 <div class="text-danger mt-2" style="font-size:.875rem;">
@@ -86,7 +90,9 @@
                        wire:model="pin_confirmation"
                        maxlength="4"
                        placeholder="••••"
-                       inputmode="numeric">
+                       inputmode="numeric"
+                       pattern="[0-9]*"
+                       oninput="this.value = this.value.replace(/[^0-9]/g, '')">
             </div>
             @error('pin_confirmation')
                 <div class="text-danger mt-2" style="font-size:.875rem;">
