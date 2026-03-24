@@ -22,7 +22,7 @@
             --theme-default: {{ $themeColor }};
             --primary-color: {{ $themeColor }};
         }
-        body { margin: 0; padding: 0; font-family: 'Nunito Sans', sans-serif; background: rgba(0,0,0,0.82); min-height: 100vh; }
+        body { margin: 0; padding: 0; font-family: 'Nunito Sans', sans-serif; background: rgba(0,0,0,0.85); min-height: 100vh; display:flex; align-items:center; justify-content:center; }
     </style>
 
     @livewireStyles
