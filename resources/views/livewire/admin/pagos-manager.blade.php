@@ -18,16 +18,14 @@
                                 @endif
                             </div>
                             <div class="d-flex gap-2 align-items-center flex-wrap">
-                                <div class="input-group" style="max-width:240px;">
-                                    <span class="input-group-text"><i class="fa-solid fa-search"></i></span>
-                                    <input type="text" class="form-control" placeholder="Buscar negocio..."
-                                           wire:model.live="search">
-                                </div>
-                                <div class="form-check form-switch mb-0 d-flex align-items-center gap-2">
-                                    <input class="form-check-input" type="checkbox" id="soloPendientes"
-                                           wire:model.live="soloPendientes">
-                                    <label class="form-check-label small" for="soloPendientes">Solo pendientes</label>
-                                </div>
+                                <button wire:click="$toggle('soloPendientes')"
+                                        class="btn btn-sm {{ $soloPendientes ? 'btn-warning' : 'btn-outline-secondary' }}">
+                                    <i class="fa-solid fa-clock me-1"></i>Solo pendientes
+                                </button>
+                                <button wire:click="abrirModalQr"
+                                        class="btn btn-sm btn-outline-primary">
+                                    <i class="fa-solid fa-qrcode me-1"></i>QR de pago
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -206,5 +204,72 @@
         </div>
     </div>
     @endif
+    @endif
+
+    {{-- MODAL: QR de pago --}}
+    @if($isOpenQr)
+    <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,.5); z-index:1060;">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:380px;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">
+                        <i class="fa-solid fa-qrcode me-2"></i>QR de pago
+                    </h5>
+                    <button type="button" class="btn-close" wire:click="cerrarModalQr"></button>
+                </div>
+                <div class="modal-body text-center">
+
+                    {{-- QR actual --}}
+                    @if($qrUrl)
+                        <p class="text-muted small mb-2">QR actual:</p>
+                        <div class="border rounded p-2 d-inline-block bg-white mb-3">
+                            <img src="{{ $qrUrl }}" alt="QR de pago"
+                                 style="width:200px; height:200px; object-fit:contain; display:block;">
+                        </div>
+                    @else
+                        <div class="text-muted py-3 mb-3">
+                            <i class="fa-solid fa-qrcode fa-3x opacity-25 mb-2 d-block"></i>
+                            No hay QR cargado aún.
+                        </div>
+                    @endif
+
+                    {{-- Subir nuevo --}}
+                    <div class="border rounded p-3 bg-light text-start">
+                        <p class="fw-semibold small mb-2">
+                            <i class="fa-solid fa-upload me-1 text-primary"></i>
+                            {{ $qrUrl ? 'Reemplazar QR' : 'Subir QR' }}
+                        </p>
+                        <input type="file"
+                               wire:model="nuevoQr"
+                               accept=".jpg,.jpeg,.png"
+                               class="form-control form-control-sm @error('nuevoQr') is-invalid @enderror">
+                        @error('nuevoQr')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="text-muted">JPG o PNG · máx 2 MB</small>
+
+                        {{-- Preview --}}
+                        @if($nuevoQr && !$errors->has('nuevoQr'))
+                        <div class="mt-2 text-center">
+                            <img src="{{ $nuevoQr->temporaryUrl() }}" alt="Preview"
+                                 class="img-thumbnail" style="max-height:140px;">
+                        </div>
+                        @endif
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary btn-sm" wire:click="cerrarModalQr">Cancelar</button>
+                    <button class="btn btn-primary btn-sm"
+                            wire:click="subirQr"
+                            wire:loading.attr="disabled"
+                            @disabled(!$nuevoQr)>
+                        <span wire:loading wire:target="subirQr" class="spinner-border spinner-border-sm me-1"></span>
+                        <i wire:loading.remove wire:target="subirQr" class="fa-solid fa-check me-1"></i>
+                        Guardar QR
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     @endif
 </div>

@@ -39,7 +39,11 @@
                                         <p class="fw-semibold mb-2">
                                             <i class="fa-solid fa-qrcode me-1 text-danger"></i>QR de pago
                                         </p>
-                                        @php $qrUrl = env('PAYMENT_QR_URL', ''); @endphp
+                                        @php
+                                            $qrUrl = \Illuminate\Support\Facades\Storage::disk('public')->exists('qr_pago.jpg')
+                                                ? asset('storage/qr_pago.jpg') . '?v=' . filemtime(storage_path('app/public/qr_pago.jpg'))
+                                                : env('PAYMENT_QR_URL', '');
+                                        @endphp
                                         @if($qrUrl)
                                             <div class="border rounded p-2 d-inline-block bg-white mb-2">
                                                 <img src="{{ $qrUrl }}" alt="QR de pago" width="180" height="180" style="display:block; object-fit:contain;">

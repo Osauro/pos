@@ -5,29 +5,29 @@ namespace App\Livewire\Admin;
 use App\Models\PagoSuscripcion;
 use App\Models\Tenant;
 use App\Traits\WithSwal;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 
 #[Layout('layouts.landlord.app')]
 class PagosManager extends Component
 {
-    use WithPagination, WithSwal;
+    use WithPagination, WithSwal, WithFileUploads;
 
-    public string $search       = '';
     public bool $soloPendientes = true;
 
-    // Modal
-    public ?int $pagoId    = null;
-    public bool $isOpenPago = false;
+    // Modal ver comprobante
+    public ?int $pagoId     = null;
+    public bool $isOpenPago  = false;
     public string $notasRechazo = '';
 
-    protected $queryString = ['search', 'soloPendientes'];
+    // Modal QR
+    public bool $isOpenQr = false;
+    public $nuevoQr       = null;
 
-    public function updatingSearch(): void
-    {
-        $this->resetPage();
-    }
+    protected $queryString = ['soloPendientes'];
 
     public function updatingSoloPendientes(): void
     {
@@ -80,18 +80,48 @@ class PagosManager extends Component
         $this->showSuccessNotification('Pago rechazado.');
     }
 
+    public function abrirModalQr(): void
+    {
+        $this->nuevoQr = null;
+        $this->isOpenQr = true;
+    }
+
+    public function cerrarModalQr(): void
+    {
+        $this->isOpenQr = false;
+        $this->nuevoQr  = null;
+        $this->resetValidation('nuevoQr');
+    }
+
+    public function subirQr(): void
+    {
+        $this->validate([
+            'nuevoQr' => 'required|image|mimes:jpg,jpeg,png|max:2048',
+        ], [
+            'nuevoQr.required' => 'Selecciona una imagen.',
+            'nuevoQr.image'    => 'El archivo debe ser una imagen.',
+            'nuevoQr.mimes'    => 'Solo JPG o PNG.',
+            'nuevoQr.max'      => 'Máximo 2 MB.',
+        ]);
+
+        Storage::disk('public')->putFileAs('', $this->nuevoQr, 'qr_pago.jpg');
+
+        $this->cerrarModalQr();
+        $this->showSuccessNotification('QR de pago actualizado.');
+    }
+
     public function render()
     {
         $pagos = PagoSuscripcion::with('tenant', 'verificadoPor')
             ->when($this->soloPendientes, fn($q) => $q->where('estado', 'pendiente'))
-            ->when($this->search, fn($q) => $q->whereHas('tenant', fn($q2) =>
-                $q2->where('nombre', 'like', "%{$this->search}%")
-            ))
             ->latest()
             ->paginate(15);
 
         $totalPendientes = PagoSuscripcion::where('estado', 'pendiente')->count();
+        $qrUrl = Storage::disk('public')->exists('qr_pago.jpg')
+            ? asset('storage/qr_pago.jpg') . '?v=' . filemtime(storage_path('app/public/qr_pago.jpg'))
+            : null;
 
-        return view('livewire.admin.pagos-manager', compact('pagos', 'totalPendientes'));
+        return view('livewire.admin.pagos-manager', compact('pagos', 'totalPendientes', 'qrUrl'));
     }
 }
