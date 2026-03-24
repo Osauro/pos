@@ -10,41 +10,35 @@ use Livewire\Component;
 #[Layout('layouts.theme.app')]
 class CrearTienda extends Component
 {
-    public string $nombreTenant    = '';
-    public string $celularTenant   = '';
-    public string $direccionTenant = '';
-    public int    $colorTenant     = 3;
+    public string $nombre       = '';
+    public string $telefono     = '';
+    public string $direccion    = '';
+    public int    $theme_number = 3;
 
     protected array $rules = [
-        'nombreTenant'    => 'required|min:2|max:100',
-        'celularTenant'   => 'nullable|max:20',
-        'direccionTenant' => 'nullable|max:200',
-        'colorTenant'     => 'required|integer|min:2|max:10',
+        'nombre'       => 'required|min:2|max:100',
+        'telefono'     => 'nullable|max:20',
+        'direccion'    => 'nullable|max:200',
+        'theme_number' => 'required|integer|min:2|max:10',
     ];
 
     protected array $messages = [
-        'nombreTenant.required' => 'El nombre de la tienda es obligatorio.',
-        'nombreTenant.min'      => 'El nombre debe tener al menos 2 caracteres.',
-        'nombreTenant.max'      => 'El nombre no puede superar 100 caracteres.',
+        'nombre.required' => 'El nombre de la tienda es obligatorio.',
+        'nombre.min'      => 'El nombre debe tener al menos 2 caracteres.',
     ];
 
-    public function seleccionarColor(int $num): void
-    {
-        $this->colorTenant = $num;
-    }
-
-    public function activar(): void
+    public function saveTenant(): void
     {
         $this->validate();
 
         $tenant = Tenant::create([
-            'nombre'       => $this->nombreTenant,
-            'slug'         => Str::slug($this->nombreTenant) . '-' . Str::random(4),
-            'telefono'     => $this->celularTenant ?: null,
-            'direccion'    => $this->direccionTenant ?: null,
+            'nombre'       => $this->nombre,
+            'slug'         => Str::slug($this->nombre) . '-' . Str::random(4),
+            'telefono'     => $this->telefono ?: null,
+            'direccion'    => $this->direccion ?: null,
             'status'       => 'activo',
             'bill_date'    => now()->addDays(30)->toDateString(),
-            'theme_number' => $this->colorTenant,
+            'theme_number' => $this->theme_number,
         ]);
 
         $tenant->users()->attach(auth()->id(), ['role' => 'admin', 'is_active' => true]);
