@@ -49,31 +49,38 @@
         </div>
 
         {{-- Color --}}
-        <div class="mb-4">
+        <div class="mb-4"
+            x-data="{
+                selected: {{ $theme_number }},
+                temas: {
+                    2:  { color: '#f73164', nombre: 'Rosa' },
+                    3:  { color: '#29adb2', nombre: 'Teal' },
+                    4:  { color: '#6610f2', nombre: 'Morado' },
+                    5:  { color: '#dc3545', nombre: 'Rojo' },
+                    6:  { color: '#f57f17', nombre: 'Naranja' },
+                    7:  { color: '#0288d1', nombre: 'Azul' },
+                    8:  { color: '#00897b', nombre: 'Verde Teal' },
+                    9:  { color: '#558b2f', nombre: 'Verde' },
+                    10: { color: '#455a64', nombre: 'Gris Azul' }
+                },
+                pick(num) {
+                    this.selected = num;
+                    $wire.set('theme_number', num, false);
+                }
+            }">
             <label class="form-label fw-semibold text-muted">Color de la Tienda</label>
-            @php
-                $temas = [
-                    2  => ['color' => '#f73164', 'nombre' => 'Rosa'],
-                    3  => ['color' => '#29adb2', 'nombre' => 'Teal'],
-                    4  => ['color' => '#6610f2', 'nombre' => 'Morado'],
-                    5  => ['color' => '#dc3545', 'nombre' => 'Rojo'],
-                    6  => ['color' => '#f57f17', 'nombre' => 'Naranja'],
-                    7  => ['color' => '#0288d1', 'nombre' => 'Azul'],
-                    8  => ['color' => '#00897b', 'nombre' => 'Verde Teal'],
-                    9  => ['color' => '#558b2f', 'nombre' => 'Verde'],
-                    10 => ['color' => '#455a64', 'nombre' => 'Gris Azul'],
-                ];
-            @endphp
             <div class="d-flex flex-wrap gap-2 mt-1">
-                @foreach($temas as $num => $tema)
-                <button type="button" wire:click="$set('theme_number', {{ $num }})" title="{{ $tema['nombre'] }}"
-                    style="width:36px;height:36px;border-radius:50%;background:{{ $tema['color'] }};border:3px solid {{ $theme_number==$num ? '#333' : 'transparent' }};outline:2px solid {{ $theme_number==$num ? $tema['color'] : 'transparent' }};outline-offset:2px;cursor:pointer;transition:all .15s;"></button>
-                @endforeach
+                <template x-for="(tema, num) in temas" :key="num">
+                    <button type="button"
+                        @click="pick(parseInt(num))"
+                        :title="tema.nombre"
+                        :style="`width:36px;height:36px;border-radius:50%;background:${tema.color};border:3px solid ${selected==num ? '#333' : 'transparent'};outline:2px solid ${selected==num ? tema.color : 'transparent'};outline-offset:2px;cursor:pointer;transition:all .15s;`">
+                    </button>
+                </template>
             </div>
-            @php $cs = $temas[$theme_number]['color'] ?? '#29adb2'; $ns = $temas[$theme_number]['nombre'] ?? 'Teal'; @endphp
             <div class="mt-2 d-flex align-items-center gap-2" style="font-size:0.82rem;color:#666;">
-                <span style="width:14px;height:14px;border-radius:50%;background:{{ $cs }};display:inline-block;"></span>
-                {{ $ns }}
+                <span :style="`width:14px;height:14px;border-radius:50%;background:${temas[selected]?.color ?? '#29adb2'};display:inline-block;`"></span>
+                <span x-text="temas[selected]?.nombre ?? 'Teal'"></span>
             </div>
         </div>
 
