@@ -108,7 +108,7 @@
             @include('layouts.theme.sidebar')
             <!-- Page sidebar end-->
 
-            <div class="page-body" @if(request()->routeIs('crear-tienda')) style="margin-left:0 !important; min-height:100vh; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.5);" @endif>
+            <div class="page-body">
                 {{ $slot }}
 
                 <!-- Espaciador para vista móvil (barra inferior fija) -->

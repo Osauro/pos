@@ -67,18 +67,20 @@
                                 10 => ['color' => '#455a64', 'nombre' => 'Gris Azul'],
                             ];
                         @endphp
-                        <div class="d-flex flex-wrap gap-2 mt-1">
+                        <div class="d-flex flex-wrap gap-2 mt-1"
+                             x-data="{ colorSel: {{ $theme_number }} }"
+                             x-init="$watch('colorSel', v => $wire.set('theme_number', v, false))">
                             @foreach($temas as $num => $tema)
                             <button type="button"
-                                wire:click="$set('theme_number', {{ $num }})"
+                                @click.prevent="colorSel = {{ $num }}"
                                 title="{{ $tema['nombre'] }}"
-                                style="
+                                :style="`
                                     width:32px; height:32px; border-radius:50%;
                                     background:{{ $tema['color'] }};
-                                    border:3px solid {{ $theme_number == $num ? '#333' : 'transparent' }};
-                                    outline:2px solid {{ $theme_number == $num ? $tema['color'] : 'transparent' }};
+                                    border:3px solid ${colorSel == {{ $num }} ? '#333' : 'transparent'};
+                                    outline:2px solid ${colorSel == {{ $num }} ? '{{ $tema['color'] }}' : 'transparent'};
                                     outline-offset:2px; cursor:pointer; transition:all .15s;
-                                ">
+                                `">
                             </button>
                             @endforeach
                         </div>
