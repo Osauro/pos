@@ -152,7 +152,11 @@ class Pos extends Component
     {
         // Verificar que haya un turno activo esta semana
         if (!$this->getTurnoActivo()) {
-            $this->swalWarning('Sin turno activo', 'No hay un turno abierto para esta semana. Crea un turno antes de registrar ventas.');
+            if ($this->esAdmin()) {
+                $this->redirect(route('turnos'), navigate: false);
+            } else {
+                $this->swalWarning('Sin turno activo', 'No hay un turno abierto para esta semana. Contacta al administrador.');
+            }
             return;
         }
 
