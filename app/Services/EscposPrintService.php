@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Log;
 use Mike42\Escpos\Printer;
 use Mike42\Escpos\CapabilityProfile;
 use Mike42\Escpos\PrintConnectors\DummyPrintConnector;
+use Mike42\Escpos\PrintConnectors\NetworkPrintConnector;
 
 /**
  * EscposPrintService
@@ -92,12 +93,16 @@ class EscposPrintService
     }
 
     // ──────────────────────────────────────────────────────────────────
-    // Impresión por red LAN (TCP socket directo a IP:puerto)
+    // Impresión por red LAN — NetworkPrintConnector (mike42 nativo)
     // ──────────────────────────────────────────────────────────────────
 
     /**
-     * Imprime ticket + comanda (si hay platos) enviando bytes crudos
-     * por TCP a las impresoras de red configuradas en el tenant.
+     * Imprime ticket y/o comanda directamente al IP:puerto de la impresora
+     * usando el NetworkPrintConnector nativo de mike42 (TCP socket).
+     *
+     * Compatible con cualquier impresora ESC/POS en red: WiFi, Ethernet,
+     * o expuesta vía ngrok/frp desde internet.
+     *
      * Retorna array ['ticket' => bool, 'comanda' => bool]
      */
     public function printNetworkCombined(Venta $venta): array
@@ -108,36 +113,33 @@ class EscposPrintService
             $tenant = \App\Helpers\TenantHelper::current();
             if (!$tenant || empty($tenant->printer_ip)) return $result;
 
-            // Ticket
+            $ip     = $tenant->printer_ip;
+            $puerto = (int) ($tenant->printer_puerto ?? 9100);
+
+            // ── Ticket ───────────────────────────────────────────────
             if (config('printer.auto_ticket')) {
-                $ticketBytes = $this->buildTicketBytes($venta);
-                // Quitar el byte de control del logo (byte 0 o 1 al inicio)
-                $rawTicket = substr($ticketBytes, 1);
-                $result['ticket'] = $this->sendTcp(
-                    $tenant->printer_ip,
-                    (int) ($tenant->printer_puerto ?? 9100),
-                    $rawTicket
-                );
+                $result['ticket'] = $this->printNetworkTicket($venta, $ip, $puerto);
             }
 
-            // Comanda (a la impresora de cocina si está configurada, si no a la misma)
+            // ── Comanda ──────────────────────────────────────────────
             if (config('printer.auto_comanda')) {
                 $items = $venta->items->filter(
                     fn($i) => $i->producto && $i->producto->tipo === 'Platos'
                 );
                 if ($items->isNotEmpty()) {
-                    $porciones    = $venta->items->filter(
+                    $porciones = $venta->items->filter(
                         fn($i) => $i->producto && $i->producto->tipo === 'Porciones'
                     );
-                    $comandaBytes = $this->buildComandaBytes($venta, $items, $porciones);
-                    $rawComanda   = substr($comandaBytes, 1); // quitar byte de control
-
-                    $ipCocina  = !empty($tenant->printer_ip_cocina) ? $tenant->printer_ip_cocina : $tenant->printer_ip;
+                    $ipCocina  = !empty($tenant->printer_ip_cocina)
+                        ? $tenant->printer_ip_cocina
+                        : $ip;
                     $puertoCocina = !empty($tenant->printer_ip_cocina)
                         ? (int) ($tenant->printer_puerto_cocina ?? 9100)
-                        : (int) ($tenant->printer_puerto ?? 9100);
+                        : $puerto;
 
-                    $result['comanda'] = $this->sendTcp($ipCocina, $puertoCocina, $rawComanda);
+                    $result['comanda'] = $this->printNetworkComanda(
+                        $venta, $items, $porciones, $ipCocina, $puertoCocina
+                    );
                 }
             }
         } catch (\Throwable $e) {
@@ -148,21 +150,45 @@ class EscposPrintService
     }
 
     /**
-     * Envía bytes crudos ESC/POS a una impresora de red por TCP.
-     * Timeout de conexión: 5 s.
+     * Imprime el ticket del cliente directamente al conector de red.
+     * Reutiliza la misma lógica de buildTicketBytes pero con NetworkPrintConnector.
      */
-    private function sendTcp(string $ip, int $port, string $bytes): bool
+    private function printNetworkTicket(Venta $venta, string $ip, int $port): bool
     {
-        $socket = @fsockopen($ip, $port, $errno, $errstr, 5);
-        if ($socket === false) {
-            Log::warning("EscposPrintService::sendTcp no pudo conectar a {$ip}:{$port} — {$errstr} ({$errno})");
+        try {
+            $connector = new NetworkPrintConnector($ip, $port, 5);
+            $profile   = CapabilityProfile::load('simple');
+            $printer   = new Printer($connector, $profile);
+            try {
+                $this->writeTicket($printer, $venta);
+            } finally {
+                $printer->close();
+            }
+            return true;
+        } catch (\Throwable $e) {
+            Log::warning("EscposPrintService::printNetworkTicket {$ip}:{$port} — " . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Imprime la comanda de cocina directamente al conector de red.
+     */
+    private function printNetworkComanda(Venta $venta, $items, $porciones, string $ip, int $port): bool
+    {
         try {
-            $written = fwrite($socket, $bytes);
-            return $written !== false && $written > 0;
-        } finally {
-            fclose($socket);
+            $connector = new NetworkPrintConnector($ip, $port, 5);
+            $profile   = CapabilityProfile::load('simple');
+            $printer   = new Printer($connector, $profile);
+            try {
+                $this->writeComanda($printer, $venta, $items, $porciones);
+            } finally {
+                $printer->close();
+            }
+            return true;
+        } catch (\Throwable $e) {
+            Log::warning("EscposPrintService::printNetworkComanda {$ip}:{$port} — " . $e->getMessage());
+            return false;
         }
     }
 
@@ -244,6 +270,44 @@ class EscposPrintService
 
     private function buildTicketBytes(Venta $venta): string
     {
+        $connector = new DummyPrintConnector();
+        $profile   = CapabilityProfile::load('simple');
+        $printer   = new Printer($connector, $profile);
+
+        try {
+            $this->writeTicket($printer, $venta);
+            $bytes = $connector->getData();
+        } finally {
+            $printer->close();
+        }
+
+        // chr(1) = Go agrega logo; chr(0) = sin logo (ya se imprimió el nombre en texto)
+        return (config('printer.logo') ? chr(1) : chr(0)) . $bytes;
+    }
+
+    private function buildComandaBytes(Venta $venta, $items, $porciones = null): string
+    {
+        $connector = new DummyPrintConnector();
+        $profile   = CapabilityProfile::load('simple');
+        $printer   = new Printer($connector, $profile);
+
+        try {
+            $this->writeComanda($printer, $venta, $items, $porciones);
+            $bytes = $connector->getData();
+        } finally {
+            $printer->close();
+        }
+
+        // Byte 0x00 = indicar a Go que NO agregue el logo local
+        return chr(0) . $bytes;
+    }
+
+    /**
+     * Escribe el contenido del ticket en el $printer dado (cualquier conector).
+     * Usado tanto por buildTicketBytes (DummyConnector) como por printNetworkTicket (NetworkConnector).
+     */
+    private function writeTicket(Printer $printer, Venta $venta): void
+    {
         $items   = $venta->items->filter(fn($i) => $i->producto)->values();
         $width   = (int) config('printer.width', 80);
         $cols    = match ($width) {
@@ -252,11 +316,6 @@ class EscposPrintService
             default => 48
         };
 
-        $connector = new DummyPrintConnector();
-        $profile   = CapabilityProfile::load('simple');
-        $printer   = new Printer($connector, $profile);
-
-        try {
         // Nombre del negocio en texto (solo cuando no hay logo configurado)
         if (!config('printer.logo')) {
             $printer->setJustification(Printer::JUSTIFY_CENTER);
@@ -268,7 +327,7 @@ class EscposPrintService
             $printer->setEmphasis(false);
         }
 
-        // Número de venta en grande (salto antes y después)
+        // Número de venta en grande
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
         $printer->setTextSize(2, 2);
@@ -276,7 +335,7 @@ class EscposPrintService
         $printer->setTextSize(1, 1);
         $printer->setEmphasis(false);
 
-        // Fecha/Hora en la misma línea, Cajero debajo
+        // Fecha/Hora y Cajero
         $printer->setJustification(Printer::JUSTIFY_LEFT);
         $fecha = $venta->fecha_hora?->format('d/m/Y') ?? now()->format('d/m/Y');
         $hora  = $venta->fecha_hora?->format('H:i')   ?? now()->format('H:i');
@@ -301,13 +360,13 @@ class EscposPrintService
             $printer->text($this->columnasDots($izq, $der, $cols) . "\n");
         }
 
-        // Total: negrita, tamaño normal, alineado a la derecha
+        // Total
         $printer->setJustification(Printer::JUSTIFY_RIGHT);
         $printer->setEmphasis(true);
         $printer->text("TOTAL: Bs. " . number_format((float) $venta->total, 2) . "\n");
         $printer->setEmphasis(false);
 
-        // Pie: gracias + encargado del turno (todo centrado)
+        // Pie
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
         $printer->text("\nGRACIAS POR SU COMPRA\n");
@@ -322,32 +381,21 @@ class EscposPrintService
 
         $printer->feed(4);
         $printer->cut(Printer::CUT_PARTIAL);
-
-        $bytes = $connector->getData();
-        } finally {
-            $printer->close();
-        }
-
-        // chr(1) = Go agrega logo; chr(0) = sin logo (ya se imprimió el nombre en texto)
-        return (config('printer.logo') ? chr(1) : chr(0)) . $bytes;
     }
 
-    private function buildComandaBytes(Venta $venta, $items, $porciones = null): string
+    /**
+     * Escribe el contenido de la comanda en el $printer dado (cualquier conector).
+     */
+    private function writeComanda(Printer $printer, Venta $venta, $items, $porciones = null): void
     {
-        $width    = (int) config('printer.width', 80);
-        $cols     = match ($width) {
+        $width = (int) config('printer.width', 80);
+        $cols  = match ($width) {
             58 => 32,
             110 => 56,
             default => 48
         };
-        $colsDobl = intdiv($cols, 2); // cols efectivas con setTextSize(2,2)
 
-        $connector = new DummyPrintConnector();
-        $profile   = CapabilityProfile::load('simple');
-        $printer   = new Printer($connector, $profile);
-
-        try {
-        // Cabecera: VENTA #{} centrado en doble tamaño
+        // Cabecera
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
         $printer->setTextSize(2, 2);
@@ -355,7 +403,7 @@ class EscposPrintService
         $printer->setTextSize(1, 1);
         $printer->setEmphasis(false);
 
-        // Items: ancho normal, altura doble (1x2) — más caracteres por línea
+        // Items
         $printer->setJustification(Printer::JUSTIFY_LEFT);
         foreach ($items as $item) {
             $nombre  = $this->nombreCorto($item);
@@ -370,7 +418,7 @@ class EscposPrintService
             $printer->setTextSize(1, 1);
         }
 
-        // Sección PORCIONES (si las hay)
+        // Sección PORCIONES
         if ($porciones && $porciones->isNotEmpty()) {
             $printer->setJustification(Printer::JUSTIFY_CENTER);
             $printer->setEmphasis(true);
@@ -388,14 +436,6 @@ class EscposPrintService
 
         $printer->feed(4);
         $printer->cut(Printer::CUT_PARTIAL);
-
-        $bytes = $connector->getData();
-        } finally {
-            $printer->close();
-        }
-
-        // Byte 0x00 = indicar a Go que NO agregue el logo local
-        return chr(0) . $bytes;
     }
 
     // ──────────────────────────────────────────────────────────────────
