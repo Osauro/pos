@@ -15,6 +15,11 @@ class Tenant extends Model
         'status',
         'bill_date',
         'theme_number',
+        'printer_modo',
+        'printer_ip',
+        'printer_puerto',
+        'printer_ip_cocina',
+        'printer_puerto_cocina',
     ];
 
     protected $casts = [
@@ -47,6 +52,39 @@ class Tenant extends Model
     public function productos()
     {
         return $this->hasMany(Producto::class, 'tenant_id');
+    }
+
+    // ── Helpers de impresión ────────────────────────────────────────────────
+
+    /** Devuelve el modo activo: 'browser' | 'escpos' | 'network_ip' */
+    public function printerModo(): string
+    {
+        return $this->printer_modo ?? 'browser';
+    }
+
+    /** true si el modo es ESC/POS mediante el agente Windows */
+    public function printerEsEscpos(): bool
+    {
+        return $this->printerModo() === 'escpos';
+    }
+
+    /** true si el modo es impresora de red por IP LAN (TCP socket) */
+    public function printerEsNetworkIp(): bool
+    {
+        return $this->printerModo() === 'network_ip';
+    }
+
+    /** Endpoint TCP para la impresora de tickets: "ip:puerto" */
+    public function printerEndpoint(): string
+    {
+        return ($this->printer_ip ?? '') . ':' . ($this->printer_puerto ?? 9100);
+    }
+
+    /** Endpoint TCP para la impresora de cocina, o null si no está configurada */
+    public function printerEndpointCocina(): ?string
+    {
+        if (empty($this->printer_ip_cocina)) return null;
+        return $this->printer_ip_cocina . ':' . ($this->printer_puerto_cocina ?? 9100);
     }
 
     public function ventas()

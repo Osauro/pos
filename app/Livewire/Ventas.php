@@ -350,13 +350,26 @@ class Ventas extends Component
             return;
         }
 
-        $svc      = app(\App\Services\EscposPrintService::class);
-        $printUrl = $svc->combinedUrl($venta);
+        $tenant      = \App\Helpers\TenantHelper::current();
+        $printerModo = $tenant?->printerModo() ?? 'browser';
+        $svc         = app(\App\Services\EscposPrintService::class);
 
-        $this->dispatch('imprimir-venta',
-            ventaId:  $venta->id,
-            printUrl: $printUrl,
-        );
+        if ($printerModo === 'escpos') {
+            $printUrl = $svc->combinedUrl($venta);
+            $this->dispatch('imprimir-venta',
+                ventaId:  $venta->id,
+                printUrl: $printUrl,
+            );
+        } elseif ($printerModo === 'network_ip') {
+            $svc->printNetworkCombined($venta);
+            $this->showSuccessNotification('Enviando a impresora de red...');
+        } else {
+            $this->dispatch('imprimir-venta',
+                ventaId:     $venta->id,
+                autoTicket:  true,
+                autoComanda: true,
+            );
+        }
     }
 
     public function generarPDF($id)

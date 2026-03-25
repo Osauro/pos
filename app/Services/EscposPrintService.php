@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Venta;
+use Illuminate\Support\Facades\Log;
 use Mike42\Escpos\Printer;
 use Mike42\Escpos\CapabilityProfile;
 use Mike42\Escpos\PrintConnectors\DummyPrintConnector;
@@ -13,16 +14,18 @@ use Mike42\Escpos\PrintConnectors\DummyPrintConnector;
  * Genera bytes ESC/POS con mike42 y los cifra para enviarlos
  * en la URL del protocolo print://{encryptedPayload}.
  *
- * Flujo:
+ * Flujo (modo agente):
  *   1. Generar bytes ESC/POS con mike42 (BufferPrintConnector)
  *   2. bytes → gzip → AES-256-GCM → base64url
  *   3. Devuelve "print://{payload}" listo para window.location.href
  *
- * El print-agent.exe en la PC cajera hace el proceso inverso:
- *   base64url → AES-256-GCM → gzip → bytes ESC/POS → WritePrinter()
+ * Flujo (modo network_ip):
+ *   1. Generar bytes ESC/POS con mike42 (BufferPrintConnector)
+ *   2. Enviar bytes crudos por socket TCP al IP:puerto de la impresora
+ *   3. Devuelve bool indicando éxito/fallo
  *
- * Al ser bytes crudos, el agente es 100% genérico y puede usarse
- * con cualquier proyecto que envíe ESC/POS cifrado.
+ * El print-agent.exe en la PC cajera hace el proceso inverso (modo agente):
+ *   base64url → AES-256-GCM → gzip → bytes ESC/POS → WritePrinter()
  */
 class EscposPrintService
 {
@@ -37,7 +40,7 @@ class EscposPrintService
             $bytes = $this->buildTicketBytes($venta);
             return 'print://' . $this->encodePayload($bytes);
         } catch (\Throwable $e) {
-            \Log::error('EscposPrintService::ticketUrl ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            Log::error('EscposPrintService::ticketUrl ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
             return null;
         }
     }
@@ -64,7 +67,7 @@ class EscposPrintService
             $combined     = chr(2) . pack('N', $ticketLen) . $ticketBytes . $comandaBytes;
             return 'print://' . $this->encodePayload($combined);
         } catch (\Throwable $e) {
-            \Log::error('EscposPrintService::combinedUrl ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            Log::error('EscposPrintService::combinedUrl ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
             return null;
         }
     }
@@ -83,8 +86,83 @@ class EscposPrintService
             $bytes = $this->buildComandaBytes($venta, $items, $porciones);
             return 'print://' . $this->encodePayload($bytes);
         } catch (\Throwable $e) {
-            \Log::error('EscposPrintService::comandaUrl ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            Log::error('EscposPrintService::comandaUrl ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
             return null;
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // Impresión por red LAN (TCP socket directo a IP:puerto)
+    // ──────────────────────────────────────────────────────────────────
+
+    /**
+     * Imprime ticket + comanda (si hay platos) enviando bytes crudos
+     * por TCP a las impresoras de red configuradas en el tenant.
+     * Retorna array ['ticket' => bool, 'comanda' => bool]
+     */
+    public function printNetworkCombined(Venta $venta): array
+    {
+        $result = ['ticket' => false, 'comanda' => false];
+
+        try {
+            $tenant = \App\Helpers\TenantHelper::current();
+            if (!$tenant || empty($tenant->printer_ip)) return $result;
+
+            // Ticket
+            if (config('printer.auto_ticket')) {
+                $ticketBytes = $this->buildTicketBytes($venta);
+                // Quitar el byte de control del logo (byte 0 o 1 al inicio)
+                $rawTicket = substr($ticketBytes, 1);
+                $result['ticket'] = $this->sendTcp(
+                    $tenant->printer_ip,
+                    (int) ($tenant->printer_puerto ?? 9100),
+                    $rawTicket
+                );
+            }
+
+            // Comanda (a la impresora de cocina si está configurada, si no a la misma)
+            if (config('printer.auto_comanda')) {
+                $items = $venta->items->filter(
+                    fn($i) => $i->producto && $i->producto->tipo === 'Platos'
+                );
+                if ($items->isNotEmpty()) {
+                    $porciones    = $venta->items->filter(
+                        fn($i) => $i->producto && $i->producto->tipo === 'Porciones'
+                    );
+                    $comandaBytes = $this->buildComandaBytes($venta, $items, $porciones);
+                    $rawComanda   = substr($comandaBytes, 1); // quitar byte de control
+
+                    $ipCocina  = !empty($tenant->printer_ip_cocina) ? $tenant->printer_ip_cocina : $tenant->printer_ip;
+                    $puertoCocina = !empty($tenant->printer_ip_cocina)
+                        ? (int) ($tenant->printer_puerto_cocina ?? 9100)
+                        : (int) ($tenant->printer_puerto ?? 9100);
+
+                    $result['comanda'] = $this->sendTcp($ipCocina, $puertoCocina, $rawComanda);
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::error('EscposPrintService::printNetworkCombined ' . $e->getMessage());
+        }
+
+        return $result;
+    }
+
+    /**
+     * Envía bytes crudos ESC/POS a una impresora de red por TCP.
+     * Timeout de conexión: 5 s.
+     */
+    private function sendTcp(string $ip, int $port, string $bytes): bool
+    {
+        $socket = @fsockopen($ip, $port, $errno, $errstr, 5);
+        if ($socket === false) {
+            Log::warning("EscposPrintService::sendTcp no pudo conectar a {$ip}:{$port} — {$errstr} ({$errno})");
+            return false;
+        }
+        try {
+            $written = fwrite($socket, $bytes);
+            return $written !== false && $written > 0;
+        } finally {
+            fclose($socket);
         }
     }
 

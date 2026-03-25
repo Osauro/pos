@@ -11,6 +11,7 @@ use App\Livewire\Movimientos;
 use App\Livewire\Ventas;
 use App\Livewire\Pos;
 use App\Livewire\Login;
+use App\Livewire\ConfiguracionImpresora;
 use App\Livewire\Admin\TenantsManager;
 use App\Livewire\Admin\HomeLandlord;
 use App\Livewire\Admin\PagosManager;
@@ -109,11 +110,12 @@ Route::middleware(['auth', 'tenant'])->group(function () {
     // Dashboard tenant
     Route::get('/dashboard', HomeTenant::class)->name('dashboard');
 
-    // Gesti�n (solo admin/landlord)
-    Route::middleware(['tenant.manage'])->group(function () {
-        Route::get('/usuarios',     Usuarios::class)->name('usuarios');
-        Route::get('/productos',    Productos::class)->name('productos');
-        Route::get('/turnos',       Turnos::class)->name('turnos');
+// Gestión (solo admin/landlord)
+        Route::middleware(['tenant.manage'])->group(function () {
+            Route::get('/usuarios',     Usuarios::class)->name('usuarios');
+            Route::get('/productos',    Productos::class)->name('productos');
+            Route::get('/turnos',       Turnos::class)->name('turnos');
+            Route::get('/configuracion/impresora', ConfiguracionImpresora::class)->name('configuracion.impresora');
     });
 
     // Suscripción: accesible aunque el tenant esté inactivo (para mostrar QR de pago)

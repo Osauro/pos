@@ -515,11 +515,14 @@ class Pos extends Component
 
             // Disparar evento de impresión (comanda + ticket)
             if (config('printer.auto_comanda') || config('printer.auto_ticket')) {
-                if (config('printer.escpos_enabled')) {
-                    // Modo exe directo: datos encriptados en la URL print://
+                $tenant      = \App\Helpers\TenantHelper::current();
+                $printerModo = $tenant?->printerModo() ?? 'browser';
+
+                if ($printerModo === 'escpos') {
+                    // Modo agente Windows: bytes ESC/POS cifrados en URL print://
                     $ventaParaImprimir = \App\Models\Venta::with(['items.producto', 'turno.encargado', 'usuario'])
                         ->find($ventaCompletadaId);
-                    $svc = app(\App\Services\EscposPrintService::class);
+                    $svc         = app(\App\Services\EscposPrintService::class);
                     $autoTicket  = config('printer.auto_ticket');
                     $autoComanda = config('printer.auto_comanda');
                     if ($autoTicket && $autoComanda) {
@@ -537,7 +540,22 @@ class Pos extends Component
                             autoComanda: $autoComanda,
                         );
                     }
+                } elseif ($printerModo === 'network_ip') {
+                    // Modo red LAN: envío TCP directo desde el servidor al IP de la impresora
+                    $ventaParaImprimir = \App\Models\Venta::with(['items.producto', 'turno.encargado', 'usuario'])
+                        ->find($ventaCompletadaId);
+                    $svc = app(\App\Services\EscposPrintService::class);
+                    $svc->printNetworkCombined($ventaParaImprimir);
+                    // Notificamos al frontend que no debe abrir ventana de impresión
+                    $this->dispatch('imprimir-venta',
+                        ventaId:     $ventaCompletadaId,
+                        printUrl:    null,
+                        autoTicket:  false,
+                        autoComanda: false,
+                        networkPrint: true,
+                    );
                 } else {
+                    // Modo browser: ventana window.print()
                     $this->dispatch('imprimir-venta',
                         ventaId:     $ventaCompletadaId,
                         autoTicket:  (bool) config('printer.auto_ticket'),

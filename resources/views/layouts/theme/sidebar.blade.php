@@ -111,6 +111,16 @@
                 </a>
             </li>
             @endif
+
+            @if($puedeGestionar)
+            <!-- Configuración Impresora -->
+            <li class="sidebar-list">
+                <a class="sidebar-link {{ request()->routeIs('configuracion.impresora') ? 'active' : '' }}" href="{{ route('configuracion.impresora') }}">
+                    <i class="fa-solid fa-print fa-fw" style="font-size: 20px; color: var(--theme-default);"></i>
+                    <h6 class="f-w-600">Impresora</h6>
+                </a>
+            </li>
+            @endif
         </ul>
     </div>
     <div class="right-arrow" id="right-arrow"><i data-feather="arrow-right"></i></div>
