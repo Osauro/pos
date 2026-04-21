@@ -341,7 +341,7 @@ class Ventas extends Component
         $this->cerrarModal();
     }
 
-    public function reimprimirVenta($id)
+    public function imprimirConOpcion($id, string $opcion)
     {
         $venta = Venta::with(['items.producto', 'turno.encargado', 'usuario'])->find($id);
 
@@ -350,26 +350,20 @@ class Ventas extends Component
             return;
         }
 
-        $tenant      = \App\Helpers\TenantHelper::current();
-        $printerModo = $tenant?->printerModo() ?? 'browser';
-        $svc         = app(\App\Services\EscposPrintService::class);
+        $svc = app(\App\Services\EscposPrintService::class);
 
-        if ($printerModo === 'escpos') {
-            $printUrl = $svc->combinedUrl($venta);
-            $this->dispatch('imprimir-venta',
-                ventaId:  $venta->id,
-                printUrl: $printUrl,
-            );
-        } elseif ($printerModo === 'network_ip') {
-            $svc->printNetworkCombined($venta);
-            $this->showSuccessNotification('Enviando a impresora de red...');
-        } else {
-            $this->dispatch('imprimir-venta',
-                ventaId:     $venta->id,
-                autoTicket:  true,
-                autoComanda: true,
-            );
+        if ($opcion === 'ticket' || $opcion === 'ambos') {
+            $svc->printVentaAgent($venta);
         }
+        if ($opcion === 'comanda' || $opcion === 'ambos') {
+            $svc->printComandaAgent($venta);
+        }
+    }
+
+    // Alias para compatibilidad con llamadas antiguas
+    public function reimprimirVenta($id)
+    {
+        $this->imprimirConOpcion($id, 'ambos');
     }
 
     public function generarPDF($id)

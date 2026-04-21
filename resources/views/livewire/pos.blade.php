@@ -351,40 +351,43 @@
     // 300px = exactamente 80mm a 96dpi
     const WIN_OPTS = 'toolbar=0,scrollbars=0,location=0,statusbar=0,menubar=0,resizable=0,width=300,height=700';
 
-    // Dispara una URL de protocolo custom (print://) via <a>.click()
-    // Chrome solo permite window.location.href una vez por gesto;
-    // el click en un <a> no tiene esa restricción.
-    function launchProtocol(url, delay = 0) {
-        const a = document.createElement('a');
-        a.href = url;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        setTimeout(() => { a.click(); document.body.removeChild(a); }, delay);
+    // Dispara una URL de protocolo custom (print://) via iframe
+    // Método más confiable que a.click() para custom protocols
+    function launchProtocol(url) {
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = url;
+        document.body.appendChild(iframe);
+        setTimeout(() => document.body.removeChild(iframe), 1000);
     }
 
     $wire.on('imprimir-venta', (data) => {
-        const d           = data[0] || data;
-        const ventaId     = d.ventaId;
-        const printUrl    = d.printUrl ?? null;
-        const autoTicket  = d.autoTicket  ?? true;
-        const autoComanda = d.autoComanda ?? true;
+        const d         = data[0] || data;
+        const ventaId   = d.ventaId;
+        const ticketUrl = d.ticketUrl ?? d.printUrl ?? null;
+        const comandaUrl = d.comandaUrl ?? null;
         if (!ventaId) return;
 
         // Android y dispositivos móviles usan fallback HTML (print:// no disponible).
         const isAndroid = /Android/i.test(navigator.userAgent);
 
-        if (!isAndroid && printUrl) {
-            // ── ESC/POS directo: ticket + comanda en un solo print:// ─────────
-            launchProtocol(printUrl);
+        if (!isAndroid && ticketUrl) {
+            // ── ESC/POS: solo ticket automático (comanda manual) ──────────────
+            launchProtocol(ticketUrl);
+        } else if (!isAndroid && comandaUrl) {
+            // ── Si viene comandaUrl sola (desde botón manual) ────────────────
+            launchProtocol(comandaUrl);
         } else {
             // ── HTML fallback (Android o sin agente): ventanas separadas ─────
+            const autoTicket = d.autoTicket ?? true;
+            const autoComanda = d.autoComanda ?? false;  // Comanda manual por defecto
             if (autoTicket) {
-                window.open(`/ticket/cliente/${ventaId}${autoComanda ? '' : '?nocomanda=1'}`, '_blank');
+                window.open(`/ticket/cliente/${ventaId}`, '_blank');
             }
             if (autoComanda) {
                 setTimeout(() => {
                     window.open(`/ticket/comanda/${ventaId}`, '_blank');
-                }, autoTicket ? 10000 : 0);
+                }, 10000);
             }
         }
     });

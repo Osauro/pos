@@ -20,10 +20,22 @@ class Tenant extends Model
         'printer_puerto',
         'printer_ip_cocina',
         'printer_puerto_cocina',
+        'printer_nombre_ticket',
+        'printer_nombre_comanda',
+        'printer_auto_ticket',
+        'printer_auto_comanda',
+        'printer_secret_key',
+        'printer_width',
+        'printer_logo',
+        'printer_show_nombre',
     ];
 
     protected $casts = [
-        'bill_date' => 'date',
+        'bill_date'             => 'date',
+        'printer_auto_ticket'   => 'boolean',
+        'printer_auto_comanda'  => 'boolean',
+        'printer_logo'          => 'boolean',
+        'printer_show_nombre'   => 'boolean',
     ];
 
     public function themeColor(): string
@@ -66,6 +78,12 @@ class Tenant extends Model
     public function printerEsEscpos(): bool
     {
         return $this->printerModo() === 'escpos';
+    }
+
+    /** true si el modo es el agente HTTP local (POST http://localhost:9876) */
+    public function printerEsAgent(): bool
+    {
+        return $this->printerModo() === 'agent';
     }
 
     /** true si el modo es impresora de red por IP LAN (TCP socket) */

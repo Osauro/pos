@@ -13,16 +13,24 @@ class ConfiguracionImpresora extends Component
 {
     use WithPermisos, WithSwal;
 
-    public string $printer_modo         = 'browser';
-    public string $printer_ip           = '';
-    public int    $printer_puerto       = 9100;
-    public string $printer_ip_cocina    = '';
-    public int    $printer_puerto_cocina = 9100;
+    // Modo único: agente HTTP local (http://localhost:9876)
+    private string $printer_modo = 'agent';
 
-    // Estado del test de conexión
-    public ?bool  $testTicketOk  = null;
-    public ?bool  $testCocinaOk  = null;
-    public string $testMsg       = '';
+    // Nombres de impresoras
+    public string $printer_nombre_ticket  = '';
+    public string $printer_nombre_comanda = '';
+
+    // Auto-impresión
+    public bool   $printer_auto_ticket  = true;
+    public bool   $printer_auto_comanda = true;
+
+    // Configuración de impresión
+    public string $printer_secret_key    = '';
+    public string $printer_width         = '80';
+    public bool   $printer_logo          = false;
+    public bool   $printer_show_nombre   = true;
+
+
 
     public function mount(): void
     {
@@ -33,119 +41,57 @@ class ConfiguracionImpresora extends Component
         $tenant = TenantHelper::current();
         if (!$tenant) abort(404);
 
-        $this->printer_modo          = $tenant->printer_modo          ?? 'browser';
-        $this->printer_ip            = $tenant->printer_ip            ?? '';
-        $this->printer_puerto        = $tenant->printer_puerto        ?? 9100;
-        $this->printer_ip_cocina     = $tenant->printer_ip_cocina     ?? '';
-        $this->printer_puerto_cocina = $tenant->printer_puerto_cocina ?? 9100;
+        $this->printer_modo          = 'agent';
+
+        $this->printer_nombre_ticket  = $tenant->printer_nombre_ticket  ?? '';
+        $this->printer_nombre_comanda = $tenant->printer_nombre_comanda ?? '';
+        $this->printer_auto_ticket    = $tenant->printer_auto_ticket    ?? true;
+        $this->printer_auto_comanda   = $tenant->printer_auto_comanda   ?? true;
+
+        $this->printer_secret_key   = $tenant->printer_secret_key   ?? '';
+        $this->printer_width        = $tenant->printer_width        ?? '80';
+        $this->printer_logo         = $tenant->printer_logo         ?? false;
+        $this->printer_show_nombre  = $tenant->printer_show_nombre  ?? true;
     }
 
     public function guardar(): void
     {
         $this->validate([
-            'printer_modo'          => 'required|in:browser,escpos,network_ip',
-            'printer_ip'            => [
-                'nullable',
-                'string',
-                'max:45',
-                function ($attr, $val, $fail) {
-                    if ($this->printer_modo === 'network_ip' && empty(trim($val))) {
-                        $fail('La IP de la impresora es obligatoria en modo Red LAN.');
-                    }
-                    if (!empty($val) && !filter_var($val, FILTER_VALIDATE_IP)) {
-                        $fail('La IP de la impresora no es válida.');
-                    }
-                },
-            ],
-            'printer_puerto'        => 'required|integer|min:1|max:65535',
-            'printer_ip_cocina'     => [
-                'nullable',
-                'string',
-                'max:45',
-                function ($attr, $val, $fail) {
-                    if (!empty($val) && !filter_var($val, FILTER_VALIDATE_IP)) {
-                        $fail('La IP de la impresora de cocina no es válida.');
-                    }
-                },
-            ],
-            'printer_puerto_cocina' => 'required|integer|min:1|max:65535',
+            'printer_nombre_ticket'  => 'nullable|string|max:255',
+            'printer_nombre_comanda' => 'nullable|string|max:255',
+            'printer_auto_ticket'    => 'boolean',
+            'printer_auto_comanda'   => 'boolean',
+            'printer_secret_key'     => 'nullable|string|size:64',
+            'printer_width'          => 'required|in:58,80,110',
+            'printer_logo'           => 'boolean',
+            'printer_show_nombre'    => 'boolean',
         ]);
 
         $tenant = TenantHelper::current();
         if (!$tenant) return;
 
         $tenant->update([
-            'printer_modo'          => $this->printer_modo,
-            'printer_ip'            => trim($this->printer_ip) ?: null,
-            'printer_puerto'        => $this->printer_puerto,
-            'printer_ip_cocina'     => trim($this->printer_ip_cocina) ?: null,
-            'printer_puerto_cocina' => $this->printer_puerto_cocina,
+            'printer_modo'           => 'agent',
+            'printer_nombre_ticket'  => trim($this->printer_nombre_ticket) ?: null,
+            'printer_nombre_comanda' => trim($this->printer_nombre_comanda) ?: null,
+            'printer_auto_ticket'    => $this->printer_auto_ticket,
+            'printer_auto_comanda'   => $this->printer_auto_comanda,
+            'printer_secret_key'     => trim($this->printer_secret_key) ?: null,
+            'printer_width'          => $this->printer_width,
+            'printer_logo'           => $this->printer_logo,
+            'printer_show_nombre'    => $this->printer_show_nombre,
         ]);
-
-        $this->testTicketOk = null;
-        $this->testCocinaOk = null;
-        $this->testMsg      = '';
 
         $this->showSuccessNotification('Configuración guardada correctamente.');
     }
 
     /**
-     * Prueba la conexión TCP a la impresora de tickets.
-     * Envía un feed de 3 líneas para verificar que responde.
+     * Genera una clave aleatoria de 64 caracteres hexadecimales (32 bytes).
      */
-    public function testConexionTicket(): void
+    public function generarClave(): void
     {
-        $ip    = trim($this->printer_ip);
-        $port  = (int) $this->printer_puerto;
-
-        [$ok, $msg] = $this->testSocket($ip, $port);
-        $this->testTicketOk = $ok;
-        $this->testMsg      = $msg;
-
-        if ($ok) {
-            $this->showSuccessNotification("Impresora ticket ({$ip}:{$port}) responde OK.");
-        } else {
-            $this->showErrorNotification("No se pudo conectar a {$ip}:{$port}. {$msg}");
-        }
-    }
-
-    /**
-     * Prueba la conexión TCP a la impresora de cocina.
-     */
-    public function testConexionCocina(): void
-    {
-        $ip   = trim($this->printer_ip_cocina);
-        $port = (int) $this->printer_puerto_cocina;
-
-        [$ok, $msg] = $this->testSocket($ip, $port);
-        $this->testCocinaOk = $ok;
-
-        if ($ok) {
-            $this->showSuccessNotification("Impresora cocina ({$ip}:{$port}) responde OK.");
-        } else {
-            $this->showErrorNotification("No se pudo conectar a {$ip}:{$port}. {$msg}");
-        }
-    }
-
-    private function testSocket(string $ip, int $port): array
-    {
-        if (empty($ip)) {
-            return [false, 'Ingresa una IP antes de probar.'];
-        }
-        if (!filter_var($ip, FILTER_VALIDATE_IP)) {
-            return [false, 'IP no válida.'];
-        }
-
-        $socket = @fsockopen($ip, $port, $errno, $errstr, 5);
-        if ($socket === false) {
-            return [false, "{$errstr} (error {$errno})"];
-        }
-
-        // Enviar un pequeño feed para que la impresora avance el papel
-        fwrite($socket, "\x1B\x40\n\n\n");
-        fclose($socket);
-
-        return [true, 'Conexión exitosa.'];
+        $this->printer_secret_key = bin2hex(random_bytes(32));
+        $this->showSuccessNotification('Clave generada correctamente. No olvides guardar la configuración.');
     }
 
     public function render()

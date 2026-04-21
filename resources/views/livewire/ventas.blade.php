@@ -56,7 +56,7 @@
                                                             </button>
                                                             @if(!isset($venta->estado) || $venta->estado !== 'Cancelado')
                                                                 <button class="btn btn-sm btn-success"
-                                                                    wire:click="reimprimirVenta({{ $venta->id }})"
+                                                                    onclick="modalImpresion({{ $venta->id }})"
                                                                     title="Reimprimir ticket y comanda">
                                                                     <i class="fa-solid fa-print"></i>
                                                                 </button>
@@ -196,7 +196,7 @@
                             <div class="d-flex gap-1">
                                 @if ($ventaSeleccionada->estado === 'Completo')
                                     <button class="btn btn-sm btn-success"
-                                        wire:click="reimprimirVenta({{ $ventaSeleccionada->id }})"
+                                        onclick="modalImpresion({{ $ventaSeleccionada->id }})"
                                         title="Reimprimir ticket y comanda">
                                         <i class="fa-solid fa-print me-1"></i>Reimprimir
                                     </button>
@@ -292,6 +292,41 @@
 
     @script
         <script>
+            window.modalImpresion = function(ventaId) {
+                Swal.fire({
+                    title: 'Reimprimir',
+                    html: `
+                        <div class="d-flex gap-2 mt-2 justify-content-center">
+                            <button id="btn-ambos" class="btn btn-success btn-sm flex-fill">
+                                <i class="fa-solid fa-print d-block mb-1"></i>Todo
+                            </button>
+                            <button id="btn-ticket" class="btn btn-outline-primary btn-sm flex-fill">
+                                <i class="fa-solid fa-ticket d-block mb-1"></i>Ticket
+                            </button>
+                            <button id="btn-comanda" class="btn btn-outline-warning btn-sm flex-fill">
+                                <i class="fa-solid fa-utensils d-block mb-1"></i>Comanda
+                            </button>
+                        </div>
+                    `,
+                    showConfirmButton: false,
+                    showCancelButton: false,
+                    didOpen: () => {
+                        document.getElementById('btn-ambos').addEventListener('click', () => {
+                            Swal.close();
+                            $wire.imprimirConOpcion(ventaId, 'ambos');
+                        });
+                        document.getElementById('btn-ticket').addEventListener('click', () => {
+                            Swal.close();
+                            $wire.imprimirConOpcion(ventaId, 'ticket');
+                        });
+                        document.getElementById('btn-comanda').addEventListener('click', () => {
+                            Swal.close();
+                            $wire.imprimirConOpcion(ventaId, 'comanda');
+                        });
+                    }
+                });
+            };
+
             // Gestionar el estado del body cuando hay modales abiertos
             $wire.on('$refresh', () => {
                 if ($wire.mostrarModal) {
@@ -353,27 +388,29 @@
             });
 
             // === IMPRESIÓN VÍA PRINT-AGENT (print:// protocol) ===
-            function launchProtocol(url, delay = 0) {
-                const a = document.createElement('a');
-                a.href = url;
-                a.style.display = 'none';
-                document.body.appendChild(a);
-                setTimeout(() => { a.click(); document.body.removeChild(a); }, delay);
+            function launchProtocol(url) {
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = url;
+                document.body.appendChild(iframe);
+                setTimeout(() => document.body.removeChild(iframe), 1000);
             }
 
             $wire.on('imprimir-venta', (data) => {
-                const d        = data[0] || data;
-                const printUrl = d.printUrl ?? null;
+                const d = data[0] || data;
+                const ticketUrl = d.ticketUrl ?? d.printUrl ?? null;
+                const comandaUrl = d.comandaUrl ?? null;
                 if (!d.ventaId) return;
 
                 // Solo Android usa fallback HTML/PDF.
                 const isAndroid = /Android/i.test(navigator.userAgent);
 
-                if (!isAndroid && printUrl) {
-                    launchProtocol(printUrl);
+                if (!isAndroid && ticketUrl) {
+                    launchProtocol(ticketUrl);
+                } else if (!isAndroid && comandaUrl) {
+                    launchProtocol(comandaUrl);
                 } else if (isAndroid) {
-                    window.open(`/ticket/cliente/${d.ventaId}?nocomanda=1`, '_blank');
-                    if (printUrl === null) setTimeout(() => window.open(`/ticket/comanda/${d.ventaId}`, '_blank'), 10000);
+                    window.open(`/ticket/cliente/${d.ventaId}`, '_blank');
                 }
             });
         </script>

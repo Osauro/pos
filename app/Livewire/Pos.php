@@ -513,61 +513,29 @@ class Pos extends Component
             $this->procesando = false;
             $this->iniciarVentaPendiente();
 
-            // Disparar evento de impresión (comanda + ticket)
-            if (config('printer.auto_comanda') || config('printer.auto_ticket')) {
-                $tenant      = \App\Helpers\TenantHelper::current();
-                $printerModo = $tenant?->printerModo() ?? 'browser';
-
-                if ($printerModo === 'escpos') {
-                    // Modo agente Windows: bytes ESC/POS cifrados en URL print://
-                    $ventaParaImprimir = \App\Models\Venta::with(['items.producto', 'turno.encargado', 'usuario'])
-                        ->find($ventaCompletadaId);
-                    $svc         = app(\App\Services\EscposPrintService::class);
-                    $autoTicket  = config('printer.auto_ticket');
-                    $autoComanda = config('printer.auto_comanda');
-                    if ($autoTicket && $autoComanda) {
-                        $printUrl = $svc->combinedUrl($ventaParaImprimir);
-                    } elseif ($autoTicket) {
-                        $printUrl = $svc->ticketUrl($ventaParaImprimir);
-                    } else {
-                        $printUrl = $svc->comandaUrl($ventaParaImprimir);
-                    }
-                    if ($printUrl !== null) {
-                        $this->dispatch('imprimir-venta',
-                            ventaId:     $ventaCompletadaId,
-                            printUrl:    $printUrl,
-                            autoTicket:  $autoTicket,
-                            autoComanda: $autoComanda,
-                        );
-                    }
-                } elseif ($printerModo === 'network_ip') {
-                    // Modo red LAN: envío TCP directo desde el servidor al IP de la impresora
-                    $ventaParaImprimir = \App\Models\Venta::with(['items.producto', 'turno.encargado', 'usuario'])
-                        ->find($ventaCompletadaId);
-                    $svc = app(\App\Services\EscposPrintService::class);
-                    $svc->printNetworkCombined($ventaParaImprimir);
-                    // Notificamos al frontend que no debe abrir ventana de impresión
-                    $this->dispatch('imprimir-venta',
-                        ventaId:     $ventaCompletadaId,
-                        printUrl:    null,
-                        autoTicket:  false,
-                        autoComanda: false,
-                        networkPrint: true,
-                    );
-                } else {
-                    // Modo browser: ventana window.print()
-                    $this->dispatch('imprimir-venta',
-                        ventaId:     $ventaCompletadaId,
-                        autoTicket:  (bool) config('printer.auto_ticket'),
-                        autoComanda: (bool) config('printer.auto_comanda'),
-                    );
-                }
-            }
-
         } catch (\Exception $e) {
             DB::rollBack();
             $this->procesando = false;
             $this->showErrorNotification('Error al procesar la venta: ' . $e->getMessage());
+            return;
+        }
+
+        // Impresión automática fuera del try-catch de BD
+        // (si falla la impresora, la venta ya quedó guardada)
+        try {
+            $ventaParaImprimir = \App\Models\Venta::with(['items.producto', 'turno.encargado', 'usuario'])
+                ->find($ventaCompletadaId);
+            $svc    = app(\App\Services\EscposPrintService::class);
+            $tenant = \App\Helpers\TenantHelper::current();
+
+            if ($tenant?->printer_auto_comanda ?? config('printer.auto_comanda')) {
+                $svc->printComandaAgent($ventaParaImprimir);
+            }
+            if ($tenant?->printer_auto_ticket ?? config('printer.auto_ticket')) {
+                $svc->printVentaAgent($ventaParaImprimir);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error de impresión post-venta: ' . $e->getMessage());
         }
     }
 
