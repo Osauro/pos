@@ -352,23 +352,24 @@ class Ventas extends Component
 
         $svc = app(\App\Services\EscposPrintService::class);
 
-        $ticketUrl  = null;
-        $comandaUrl = null;
-
         if ($opcion === 'ticket' || $opcion === 'ambos') {
-            $ticketUrl = $svc->ticketUrlForced($venta);
+            $built = $svc->buildTicketJob($venta);
+            if ($built['ok']) {
+                $this->dispatch('print-agent',
+                    payload: array_merge(['printer' => $built['printer']], $built['job']),
+                    ventaId: $venta->id
+                );
+            }
         }
         if ($opcion === 'comanda' || $opcion === 'ambos') {
-            $comandaUrl = $svc->comandaUrlForced($venta);
+            $built = $svc->buildComandaJob($venta);
+            if ($built['ok']) {
+                $this->dispatch('print-agent',
+                    payload: array_merge(['printer' => $built['printer']], $built['job']),
+                    ventaId: $venta->id
+                );
+            }
         }
-
-        $this->dispatch('imprimir-venta', [
-            'ventaId'     => $venta->id,
-            'ticketUrl'   => $ticketUrl,
-            'comandaUrl'  => $comandaUrl,
-            'autoTicket'  => in_array($opcion, ['ticket', 'ambos']),
-            'autoComanda' => in_array($opcion, ['comanda', 'ambos']),
-        ]);
     }
 
     // Alias para compatibilidad con llamadas antiguas

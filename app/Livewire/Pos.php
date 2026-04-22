@@ -521,30 +521,33 @@ class Pos extends Component
         }
 
         // Impresión automática fuera del try-catch de BD
-        // (si falla la impresora, la venta ya quedó guardada)
-        // Se generan URLs print:// y se despachan al navegador del cliente.
-        // El print-agent corre en la PC local del cliente, NO en el servidor.
+        // El servidor construye el UniversalJob cifrado y lo despacha al JS del cliente.
+        // El JS hace fetch() a localhost:9876 — el agente corre en la PC del cliente.
         try {
             $ventaParaImprimir = \App\Models\Venta::with(['items.producto', 'turno.encargado', 'usuario'])
                 ->find($ventaCompletadaId);
             $svc    = app(\App\Services\EscposPrintService::class);
             $tenant = \App\Helpers\TenantHelper::current();
 
-            $ticketUrl  = ($tenant?->printer_auto_ticket  ?? config('printer.auto_ticket'))
-                ? $svc->ticketUrl($ventaParaImprimir)
-                : null;
+            if ($tenant?->printer_auto_comanda ?? config('printer.auto_comanda')) {
+                $built = $svc->buildComandaJob($ventaParaImprimir);
+                if ($built['ok']) {
+                    $this->dispatch('print-agent',
+                        payload: array_merge(['printer' => $built['printer']], $built['job']),
+                        ventaId: $ventaCompletadaId
+                    );
+                }
+            }
 
-            $comandaUrl = ($tenant?->printer_auto_comanda ?? config('printer.auto_comanda'))
-                ? $svc->comandaUrl($ventaParaImprimir)
-                : null;
-
-            $this->dispatch('imprimir-venta', [
-                'ventaId'    => $ventaCompletadaId,
-                'ticketUrl'  => $ticketUrl,
-                'comandaUrl' => $comandaUrl,
-                'autoTicket' => (bool) ($tenant?->printer_auto_ticket  ?? config('printer.auto_ticket')),
-                'autoComanda'=> (bool) ($tenant?->printer_auto_comanda ?? config('printer.auto_comanda')),
-            ]);
+            if ($tenant?->printer_auto_ticket ?? config('printer.auto_ticket')) {
+                $built = $svc->buildTicketJob($ventaParaImprimir);
+                if ($built['ok']) {
+                    $this->dispatch('print-agent',
+                        payload: array_merge(['printer' => $built['printer']], $built['job']),
+                        ventaId: $ventaCompletadaId
+                    );
+                }
+            }
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Error de impresión post-venta: ' . $e->getMessage());
         }

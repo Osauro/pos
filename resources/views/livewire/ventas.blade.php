@@ -387,31 +387,28 @@
                 });
             });
 
-            // === IMPRESIÓN VÍA PRINT-AGENT (print:// protocol) ===
-            function launchProtocol(url) {
-                const iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                iframe.src = url;
-                document.body.appendChild(iframe);
-                setTimeout(() => document.body.removeChild(iframe), 1000);
+            // === IMPRESIÓN VÍA PRINT-AGENT (fetch a localhost:9876) ===
+            async function sendToAgent(payload, ventaId) {
+                const agentUrl = 'http://localhost:9876/api/print/universal';
+                try {
+                    const controller = new AbortController();
+                    const tid = setTimeout(() => controller.abort(), 5000);
+                    const res = await fetch(agentUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                        signal: controller.signal,
+                    });
+                    clearTimeout(tid);
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                } catch (err) {
+                    if (ventaId) window.open(`/ticket/cliente/${ventaId}`, '_blank');
+                }
             }
 
-            $wire.on('imprimir-venta', (data) => {
+            $wire.on('print-agent', (data) => {
                 const d = data[0] || data;
-                const ticketUrl = d.ticketUrl ?? d.printUrl ?? null;
-                const comandaUrl = d.comandaUrl ?? null;
-                if (!d.ventaId) return;
-
-                // Solo Android usa fallback HTML/PDF.
-                const isAndroid = /Android/i.test(navigator.userAgent);
-
-                if (!isAndroid && ticketUrl) {
-                    launchProtocol(ticketUrl);
-                } else if (!isAndroid && comandaUrl) {
-                    launchProtocol(comandaUrl);
-                } else if (isAndroid) {
-                    window.open(`/ticket/cliente/${d.ventaId}`, '_blank');
-                }
+                if (d.payload) sendToAgent(d.payload, d.ventaId ?? null);
             });
         </script>
     @endscript

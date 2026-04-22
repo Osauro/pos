@@ -348,48 +348,29 @@
         }
     }, true);
 
-    // 300px = exactamente 80mm a 96dpi
-    const WIN_OPTS = 'toolbar=0,scrollbars=0,location=0,statusbar=0,menubar=0,resizable=0,width=300,height=700';
-
-    // Dispara una URL de protocolo custom (print://) via iframe
-    // Método más confiable que a.click() para custom protocols
-    function launchProtocol(url) {
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = url;
-        document.body.appendChild(iframe);
-        setTimeout(() => document.body.removeChild(iframe), 1000);
+    // Envía el UniversalJob al agente local vía fetch() (igual que FADI-V2)
+    async function sendToAgent(payload, ventaId) {
+        const agentUrl = 'http://localhost:9876/api/print/universal';
+        try {
+            const controller = new AbortController();
+            const tid = setTimeout(() => controller.abort(), 5000);
+            const res = await fetch(agentUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                signal: controller.signal,
+            });
+            clearTimeout(tid);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+        } catch (err) {
+            // Fallback HTML si el agente no responde
+            if (ventaId) window.open(`/ticket/cliente/${ventaId}`, '_blank');
+        }
     }
 
-    $wire.on('imprimir-venta', (data) => {
-        const d         = data[0] || data;
-        const ventaId   = d.ventaId;
-        const ticketUrl = d.ticketUrl ?? d.printUrl ?? null;
-        const comandaUrl = d.comandaUrl ?? null;
-        if (!ventaId) return;
-
-        // Android y dispositivos móviles usan fallback HTML (print:// no disponible).
-        const isAndroid = /Android/i.test(navigator.userAgent);
-
-        if (!isAndroid && ticketUrl) {
-            // ── ESC/POS: solo ticket automático (comanda manual) ──────────────
-            launchProtocol(ticketUrl);
-        } else if (!isAndroid && comandaUrl) {
-            // ── Si viene comandaUrl sola (desde botón manual) ────────────────
-            launchProtocol(comandaUrl);
-        } else {
-            // ── HTML fallback (Android o sin agente): ventanas separadas ─────
-            const autoTicket = d.autoTicket ?? true;
-            const autoComanda = d.autoComanda ?? false;  // Comanda manual por defecto
-            if (autoTicket) {
-                window.open(`/ticket/cliente/${ventaId}`, '_blank');
-            }
-            if (autoComanda) {
-                setTimeout(() => {
-                    window.open(`/ticket/comanda/${ventaId}`, '_blank');
-                }, 10000);
-            }
-        }
+    $wire.on('print-agent', (data) => {
+        const d = data[0] || data;
+        if (d.payload) sendToAgent(d.payload, d.ventaId ?? null);
     });
 </script>
 @endscript

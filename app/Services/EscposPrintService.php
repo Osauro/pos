@@ -686,6 +686,160 @@ class EscposPrintService
     }
 
     /**
+     * Construye el UniversalJob de ticket SIN enviarlo al agente.
+     * Para despachar al JS del cliente vía evento Livewire.
+     *
+     * @return array ['ok' => bool, 'printer' => string, 'job' => array] | ['ok' => false, 'error' => string]
+     */
+    public function buildTicketJob(Venta $venta, bool $cashDrawer = false): array
+    {
+        try {
+            $tenant = \App\Helpers\TenantHelper::current();
+            $key    = $tenant?->printer_secret_key ?? config('print_agent.secret_key', '');
+
+            if (empty($key)) {
+                return ['ok' => false, 'error' => 'No hay clave de cifrado configurada'];
+            }
+
+            $nombre = $tenant?->printer_nombre_ticket ?? '';
+            if (empty($nombre)) {
+                return ['ok' => false, 'error' => 'No hay impresora de ticket configurada'];
+            }
+
+            $cols       = ((int) ($tenant?->printer_width ?? config('printer.width', 80))) >= 80 ? 48 : 32;
+            $showNombre = (bool) ($tenant?->printer_show_nombre ?? true);
+            $showLogo   = (bool) ($tenant?->printer_logo ?? false);
+
+            $items = $venta->items
+                ->filter(fn($i) => $i->producto)
+                ->map(fn($i) => [
+                    'text'  => $i->cantidad . ' ' . $this->pluralizarNombre($i->producto->nombre, (int) $i->cantidad),
+                    'price' => (float) $i->subtotal,
+                ])->values()->toArray();
+
+            $totals = ['TOTAL' => (float) $venta->total];
+
+            $footer = "\x1B\x61\x01";
+            if ($venta->turno && $venta->turno->encargado) {
+                $enc = $venta->turno->encargado;
+                $footer .= $this->sanitize($enc->nombre) . "\x0A";
+                if (!empty($enc->celular)) {
+                    $footer .= $this->sanitize($enc->celular) . "\x0A";
+                }
+            }
+            $footer .= "\x0A";
+            if ($cashDrawer) {
+                $footer .= "\x1B\x70\x00\x32\xFA";
+            }
+            $footer .= "\x1D\x56\x41\x00";
+
+            return [
+                'ok'      => true,
+                'printer' => $nombre,
+                'job'     => [
+                    'logo'   => $showLogo,
+                    'header' => $this->encryptSection($key, $this->buildEscHeader([
+                        'business_name' => $showNombre ? mb_strtoupper($tenant?->nombre ?? '') : '',
+                        'title'         => 'VENTA #' . $venta->numero_venta,
+                        'date'          => $venta->fecha_hora?->format('d/m/Y H:i') ?? now()->format('d/m/Y H:i'),
+                        'user'          => $venta->usuario?->nombre ?? '',
+                    ])),
+                    'body'   => $this->encryptSection($key, $this->buildEscBody($items, $cols)),
+                    'totals' => $this->encryptSection($key, $this->buildEscTotals($totals, $cols)),
+                    'footer' => $this->encryptSection($key, $footer),
+                ],
+            ];
+        } catch (\Throwable $e) {
+            Log::error('EscposPrintService::buildTicketJob ' . $e->getMessage());
+            return ['ok' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Construye el UniversalJob de comanda SIN enviarlo al agente.
+     * Para despachar al JS del cliente vía evento Livewire.
+     *
+     * @return array ['ok' => bool, 'printer' => string, 'job' => array] | ['ok' => false, 'error' => string]
+     */
+    public function buildComandaJob(Venta $venta): array
+    {
+        try {
+            $tenant = \App\Helpers\TenantHelper::current();
+            $key    = $tenant?->printer_secret_key ?? config('print_agent.secret_key', '');
+
+            if (empty($key)) {
+                return ['ok' => false, 'error' => 'No hay clave de cifrado configurada'];
+            }
+
+            $nombre = (!empty($tenant?->printer_nombre_comanda))
+                ? $tenant->printer_nombre_comanda
+                : ($tenant?->printer_nombre_ticket ?? '');
+            if (empty($nombre)) {
+                return ['ok' => false, 'error' => 'No hay impresora de comanda configurada'];
+            }
+
+            $cols      = ((int) ($tenant?->printer_width ?? config('printer.width', 80))) >= 80 ? 48 : 32;
+            $todosItems = $venta->items->filter(fn($i) => $i->producto);
+
+            if ($todosItems->isEmpty()) {
+                return ['ok' => false, 'error' => 'No hay ítems para la comanda'];
+            }
+
+            $platos    = $todosItems->filter(fn($i) => $i->producto->tipo === 'Platos');
+            $porciones = $todosItems->filter(fn($i) => $i->producto->tipo === 'Porciones');
+            $otros     = $todosItems->filter(fn($i) => !in_array($i->producto->tipo, ['Platos', 'Porciones']));
+
+            $body = "\x1B\x40\x1B\x61\x01\x1D\x21\x11\x1B\x45\x01";
+            $body .= 'VENTA #' . $venta->numero_venta . "\x0A";
+            $body .= "\x1B\x45\x00\x1D\x21\x00\x0A";
+
+            foreach ($platos as $item) {
+                $nombre2 = $this->nombreCorto($item);
+                $detalle = $this->buildDetalle($item);
+                $texto   = $item->cantidad . ' ' . $nombre2;
+                if ($detalle) {
+                    $puntos = max(1, $cols - mb_strlen($texto) - mb_strlen($detalle));
+                    $texto .= str_repeat('.', $puntos) . $detalle;
+                }
+                $body .= "\x1B\x61\x00\x1D\x21\x01" . $this->sanitize($texto) . "\x0A\x1D\x21\x00";
+            }
+
+            if ($porciones->isNotEmpty()) {
+                $body .= "\x0A\x1B\x61\x01" . $this->sanitize('----- P O R C I O N E S -----') . "\x0A\x0A";
+                foreach ($porciones as $item) {
+                    $n = $this->pluralizarNombre($item->producto->nombre, (int) $item->cantidad);
+                    $body .= "\x1B\x61\x00\x1D\x21\x01" . $this->sanitize($item->cantidad . ' ' . $n) . "\x0A\x1D\x21\x00";
+                }
+            }
+
+            if ($otros->isNotEmpty()) {
+                if ($platos->isNotEmpty() || $porciones->isNotEmpty()) {
+                    $body .= "\x0A\x1B\x61\x01" . $this->sanitize('------------ + ------------') . "\x0A\x0A";
+                }
+                foreach ($otros as $item) {
+                    $n = $this->pluralizarNombre($item->producto->nombre, (int) $item->cantidad);
+                    $body .= "\x1B\x61\x00\x1D\x21\x01" . $this->sanitize($item->cantidad . ' ' . $n) . "\x0A\x1D\x21\x00";
+                }
+            }
+
+            $footer = "\x0A\x0A\x0A\x1D\x56\x41\x00";
+
+            return [
+                'ok'      => true,
+                'printer' => $nombre,
+                'job'     => [
+                    'logo'   => false,
+                    'body'   => $this->encryptSection($key, $body),
+                    'footer' => $this->encryptSection($key, $footer),
+                ],
+            ];
+        } catch (\Throwable $e) {
+            Log::error('EscposPrintService::buildComandaJob ' . $e->getMessage());
+            return ['ok' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
      * Envía un UniversalJob al agente de impresión HTTP local.
      *
      * $job puede contener (todos encriptados con encryptSection):
