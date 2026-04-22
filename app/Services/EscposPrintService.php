@@ -81,14 +81,12 @@ class EscposPrintService
 
     private function buildTicketUrl(Venta $venta, $tenant): ?string
     {
-        if (empty($tenant->printer_nombre_ticket)) return null;
         $json = $this->buildTicketJson($venta, $tenant);
         return 'print://' . $this->encodePayload($json, $tenant);
     }
 
     private function buildComandaUrlInternal(Venta $venta, $tenant): ?string
     {
-        if (empty($tenant->printer_nombre_comanda) && empty($tenant->printer_nombre_ticket)) return null;
         $items = $venta->items->filter(fn($i) => $i->producto && $i->producto->tipo === 'Platos');
         if ($items->isEmpty()) return null;
         $porciones = $venta->items->filter(fn($i) => $i->producto && $i->producto->tipo === 'Porciones');
