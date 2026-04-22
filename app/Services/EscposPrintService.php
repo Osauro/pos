@@ -20,15 +20,14 @@ class EscposPrintService
     // ============================================================================
 
     /**
-     * Genera URL print:// para ticket de venta
+     * Genera URL print:// para ticket de venta (respeta printer_auto_ticket del tenant)
      */
     public function ticketUrl(Venta $venta): ?string
     {
         try {
             $tenant = \App\Helpers\TenantHelper::current();
             if (!$tenant || !$tenant->printer_auto_ticket) return null;
-            $json = $this->buildTicketJson($venta, $tenant);
-            return 'print://' . $this->encodePayload($json, $tenant);
+            return $this->buildTicketUrl($venta, $tenant);
         } catch (\Throwable $e) {
             Log::error('EscposPrintService::ticketUrl ' . $e->getMessage());
             return null;
@@ -36,22 +35,65 @@ class EscposPrintService
     }
 
     /**
-     * Genera URL print:// para comanda de cocina
+     * Genera URL print:// para ticket sin importar printer_auto_ticket (reimpresión manual)
+     */
+    public function ticketUrlForced(Venta $venta): ?string
+    {
+        try {
+            $tenant = \App\Helpers\TenantHelper::current();
+            if (!$tenant) return null;
+            return $this->buildTicketUrl($venta, $tenant);
+        } catch (\Throwable $e) {
+            Log::error('EscposPrintService::ticketUrlForced ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Genera URL print:// para comanda de cocina (respeta printer_auto_comanda del tenant)
      */
     public function comandaUrl(Venta $venta): ?string
     {
         try {
             $tenant = \App\Helpers\TenantHelper::current();
             if (!$tenant || !$tenant->printer_auto_comanda) return null;
-            $items = $venta->items->filter(fn($i) => $i->producto && $i->producto->tipo === 'Platos');
-            if ($items->isEmpty()) return null;
-            $porciones = $venta->items->filter(fn($i) => $i->producto && $i->producto->tipo === 'Porciones');
-            $json = $this->buildComandaJson($venta, $items, $porciones, $tenant);
-            return 'print://' . $this->encodePayload($json, $tenant);
+            return $this->buildComandaUrlInternal($venta, $tenant);
         } catch (\Throwable $e) {
             Log::error('EscposPrintService::comandaUrl ' . $e->getMessage());
             return null;
         }
+    }
+
+    /**
+     * Genera URL print:// para comanda sin importar printer_auto_comanda (reimpresión manual)
+     */
+    public function comandaUrlForced(Venta $venta): ?string
+    {
+        try {
+            $tenant = \App\Helpers\TenantHelper::current();
+            if (!$tenant) return null;
+            return $this->buildComandaUrlInternal($venta, $tenant);
+        } catch (\Throwable $e) {
+            Log::error('EscposPrintService::comandaUrlForced ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    private function buildTicketUrl(Venta $venta, $tenant): ?string
+    {
+        if (empty($tenant->printer_nombre_ticket)) return null;
+        $json = $this->buildTicketJson($venta, $tenant);
+        return 'print://' . $this->encodePayload($json, $tenant);
+    }
+
+    private function buildComandaUrlInternal(Venta $venta, $tenant): ?string
+    {
+        if (empty($tenant->printer_nombre_comanda) && empty($tenant->printer_nombre_ticket)) return null;
+        $items = $venta->items->filter(fn($i) => $i->producto && $i->producto->tipo === 'Platos');
+        if ($items->isEmpty()) return null;
+        $porciones = $venta->items->filter(fn($i) => $i->producto && $i->producto->tipo === 'Porciones');
+        $json = $this->buildComandaJson($venta, $items, $porciones, $tenant);
+        return 'print://' . $this->encodePayload($json, $tenant);
     }
 
     /**

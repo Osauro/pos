@@ -356,10 +356,10 @@ class Ventas extends Component
         $comandaUrl = null;
 
         if ($opcion === 'ticket' || $opcion === 'ambos') {
-            $ticketUrl = $svc->ticketUrl($venta);
+            $ticketUrl = $svc->ticketUrlForced($venta);
         }
         if ($opcion === 'comanda' || $opcion === 'ambos') {
-            $comandaUrl = $svc->comandaUrl($venta);
+            $comandaUrl = $svc->comandaUrlForced($venta);
         }
 
         $this->dispatch('imprimir-venta', [
