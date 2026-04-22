@@ -522,18 +522,29 @@ class Pos extends Component
 
         // Impresión automática fuera del try-catch de BD
         // (si falla la impresora, la venta ya quedó guardada)
+        // Se generan URLs print:// y se despachan al navegador del cliente.
+        // El print-agent corre en la PC local del cliente, NO en el servidor.
         try {
             $ventaParaImprimir = \App\Models\Venta::with(['items.producto', 'turno.encargado', 'usuario'])
                 ->find($ventaCompletadaId);
             $svc    = app(\App\Services\EscposPrintService::class);
             $tenant = \App\Helpers\TenantHelper::current();
 
-            if ($tenant?->printer_auto_comanda ?? config('printer.auto_comanda')) {
-                $svc->printComandaAgent($ventaParaImprimir);
-            }
-            if ($tenant?->printer_auto_ticket ?? config('printer.auto_ticket')) {
-                $svc->printVentaAgent($ventaParaImprimir);
-            }
+            $ticketUrl  = ($tenant?->printer_auto_ticket  ?? config('printer.auto_ticket'))
+                ? $svc->ticketUrl($ventaParaImprimir)
+                : null;
+
+            $comandaUrl = ($tenant?->printer_auto_comanda ?? config('printer.auto_comanda'))
+                ? $svc->comandaUrl($ventaParaImprimir)
+                : null;
+
+            $this->dispatch('imprimir-venta', [
+                'ventaId'    => $ventaCompletadaId,
+                'ticketUrl'  => $ticketUrl,
+                'comandaUrl' => $comandaUrl,
+                'autoTicket' => (bool) ($tenant?->printer_auto_ticket  ?? config('printer.auto_ticket')),
+                'autoComanda'=> (bool) ($tenant?->printer_auto_comanda ?? config('printer.auto_comanda')),
+            ]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Error de impresión post-venta: ' . $e->getMessage());
         }
