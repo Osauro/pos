@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\Log;
  * Modo único: Agente (print://{payload_cifrado})
  * - Genera JSON → gzip → AES-256-GCM → base64url → print://
  * - El print-agent.exe descifra y procesa
- * - Fallback HTML para navegadores sin soporte del protocolo
  */
 class EscposPrintService
 {
@@ -113,43 +112,6 @@ class EscposPrintService
     }
 
     // ============================================================================
-    // HTML Fallback (para navegadores sin soporte print://)
-    // ============================================================================
-
-    /**
-     * Genera HTML autoimprimible para ticket
-     */
-    public function ticketHtml(Venta $venta): ?string
-    {
-        try {
-            $tenant = \App\Helpers\TenantHelper::current();
-            if (!$tenant) return null;
-            return $this->buildTicketHtml($venta, $tenant);
-        } catch (\Throwable $e) {
-            Log::error('EscposPrintService::ticketHtml ' . $e->getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * Genera HTML autoimprimible para comanda
-     */
-    public function comandaHtml(Venta $venta): ?string
-    {
-        try {
-            $tenant = \App\Helpers\TenantHelper::current();
-            if (!$tenant) return null;
-            $items = $venta->items->filter(fn($i) => $i->producto && $i->producto->tipo === 'Platos');
-            if ($items->isEmpty()) return null;
-            $porciones = $venta->items->filter(fn($i) => $i->producto && $i->producto->tipo === 'Porciones');
-            return $this->buildComandaHtml($venta, $items, $porciones, $tenant);
-        } catch (\Throwable $e) {
-            Log::error('EscposPrintService::comandaHtml ' . $e->getMessage());
-            return null;
-        }
-    }
-
-    // ============================================================================
     // Construcción JSON para print-agent (formato TicketData estructurado)
     // ============================================================================
 
@@ -244,102 +206,6 @@ class EscposPrintService
         $lines[] = ['type' => 'cut', 'value' => 'partial'];
 
         return json_encode(['printer' => $tenant->printer_nombre_comanda ?? '', 'lines' => $lines], JSON_UNESCAPED_UNICODE);
-    }
-
-    // ============================================================================
-    // Construcción HTML Fallback
-    // ============================================================================
-
-    private function buildTicketHtml(Venta $venta, $tenant): string
-    {
-        $items = $venta->items->filter(fn($i) => $i->producto)->values();
-
-        $html = '<!DOCTYPE html><html><head><meta charset="utf-8">';
-        $html .= '<style>';
-        $html .= 'body{font-family:monospace;width:300px;margin:20px auto;font-size:12px}';
-        $html .= '.center{text-align:center}.right{text-align:right}.bold{font-weight:bold}';
-        $html .= '.large{font-size:18px}.item{display:flex;justify-content:space-between}';
-        $html .= '@media print{body{margin:0}}';
-        $html .= '</style>';
-        $html .= '<script>window.onload=function(){window.print();}</script>';
-        $html .= '</head><body>';
-
-        // Encabezado
-        $html .= '<div class="center bold large">' . htmlspecialchars(mb_strtoupper($tenant->nombre ?? 'MI NEGOCIO')) . '</div>';
-        $html .= '<div class="center bold large">VENTA #' . $venta->numero_venta . '</div><br>';
-
-        // Info
-        $html .= 'Fecha: ' . ($venta->fecha_hora?->format('d/m/Y H:i') ?? now()->format('d/m/Y H:i')) . '<br>';
-        if ($venta->usuario) $html .= 'Cajero: ' . htmlspecialchars($venta->usuario->nombre) . '<br>';
-        $html .= '<br>--- D E T A L L E ---<br><br>';
-
-        // Items
-        foreach ($items as $item) {
-            $nombre = $this->pluralizarNombre($item->producto->nombre, $item->cantidad);
-            $html .= '<div class="item">';
-            $html .= '<span>' . $item->cantidad . ' ' . htmlspecialchars($nombre) . '</span>';
-            $html .= '<span>' . number_format($item->subtotal, 2) . '</span>';
-            $html .= '</div>';
-        }
-
-        // Total
-        $html .= '<br><div class="right bold">TOTAL: Bs. ' . number_format($venta->total, 2) . '</div>';
-
-        // Métodos de pago
-        if (($venta->efectivo ?? 0) > 0 && (float)$venta->efectivo != (float)$venta->total) {
-            $html .= '<div class="right">Efectivo: ' . number_format($venta->efectivo, 2) . '</div>';
-        }
-        if (($venta->online ?? 0) > 0) {
-            $html .= '<div class="right">Online: ' . number_format($venta->online, 2) . '</div>';
-        }
-        if (($venta->credito ?? 0) > 0) {
-            $html .= '<div class="right">Crédito: ' . number_format($venta->credito, 2) . '</div>';
-        }
-
-        // Footer
-        $html .= '<br><div class="center bold">¡Gracias por su compra!</div>';
-        if ($venta->turno && $venta->turno->encargado) {
-            $html .= '<div class="center">' . htmlspecialchars($venta->turno->encargado->nombre) . '</div>';
-            if (!empty($venta->turno->encargado->celular)) {
-                $html .= '<div class="center">' . htmlspecialchars($venta->turno->encargado->celular) . '</div>';
-            }
-        }
-
-        $html .= '</body></html>';
-        return $html;
-    }
-
-    private function buildComandaHtml(Venta $venta, $items, $porciones, $tenant): string
-    {
-        $html = '<!DOCTYPE html><html><head><meta charset="utf-8">';
-        $html .= '<style>';
-        $html .= 'body{font-family:monospace;width:200px;margin:20px auto;font-size:16px}';
-        $html .= '.center{text-align:center}.bold{font-weight:bold}.large{font-size:24px}';
-        $html .= '@media print{body{margin:0}}';
-        $html .= '</style>';
-        $html .= '<script>window.onload=function(){window.print();}</script>';
-        $html .= '</head><body>';
-
-        $html .= '<div class="center bold large">VENTA #' . $venta->numero_venta . '</div><br>';
-
-        foreach ($items as $item) {
-            $nombre = $this->nombreCorto($item);
-            $detalle = $this->buildDetalle($item);
-            $html .= '<div class="large">' . $item->cantidad . ' ' . htmlspecialchars($nombre);
-            if ($detalle) $html .= ' <span style="float:right">' . htmlspecialchars($detalle) . '</span>';
-            $html .= '</div>';
-        }
-
-        if ($porciones && $porciones->isNotEmpty()) {
-            $html .= '<br><div class="center bold">P O R C I O N E S</div><br>';
-            foreach ($porciones as $item) {
-                $nombre = $this->pluralizarNombre($item->producto->nombre, $item->cantidad);
-                $html .= '<div class="large">' . $item->cantidad . ' ' . htmlspecialchars($nombre) . '</div>';
-            }
-        }
-
-        $html .= '</body></html>';
-        return $html;
     }
 
     // ============================================================================
