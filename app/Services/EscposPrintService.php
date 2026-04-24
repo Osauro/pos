@@ -787,7 +787,10 @@ class EscposPrintService
 
             $platos    = $todosItems->filter(fn($i) => $i->producto->tipo === 'Platos');
             $porciones = $todosItems->filter(fn($i) => $i->producto->tipo === 'Porciones');
-            $otros     = $todosItems->filter(fn($i) => !in_array($i->producto->tipo, ['Platos', 'Porciones']));
+
+            if ($platos->isEmpty() && $porciones->isEmpty()) {
+                return ['ok' => false, 'error' => 'No hay platos ni porciones para la comanda'];
+            }
 
             $body = "\x1B\x40\x1B\x61\x01\x1D\x21\x11\x1B\x45\x01";
             $body .= 'VENTA #' . $venta->numero_venta . "\x0A";
@@ -807,16 +810,6 @@ class EscposPrintService
             if ($porciones->isNotEmpty()) {
                 $body .= "\x0A\x1B\x61\x01" . $this->sanitize('----- P O R C I O N E S -----') . "\x0A\x0A";
                 foreach ($porciones as $item) {
-                    $n = $this->pluralizarNombre($item->producto->nombre, (int) $item->cantidad);
-                    $body .= "\x1B\x61\x00\x1D\x21\x01" . $this->sanitize($item->cantidad . ' ' . $n) . "\x0A\x1D\x21\x00";
-                }
-            }
-
-            if ($otros->isNotEmpty()) {
-                if ($platos->isNotEmpty() || $porciones->isNotEmpty()) {
-                    $body .= "\x0A\x1B\x61\x01" . $this->sanitize('------------ + ------------') . "\x0A\x0A";
-                }
-                foreach ($otros as $item) {
                     $n = $this->pluralizarNombre($item->producto->nombre, (int) $item->cantidad);
                     $body .= "\x1B\x61\x00\x1D\x21\x01" . $this->sanitize($item->cantidad . ' ' . $n) . "\x0A\x1D\x21\x00";
                 }
