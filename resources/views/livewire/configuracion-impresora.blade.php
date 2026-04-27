@@ -162,7 +162,7 @@
 
 @script
 <script>
-    function confirmarResetTenant() {
+    window.confirmarResetTenant = function() {
         Swal.fire({
             icon: 'warning',
             title: '¿Resetear todos los datos?',
@@ -190,6 +190,6 @@
                 $wire.resetTenant();
             }
         });
-    }
+    };
 </script>
 @endscript
