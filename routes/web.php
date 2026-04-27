@@ -17,6 +17,7 @@ use App\Livewire\Admin\HomeLandlord;
 use App\Livewire\Admin\PagosManager;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\EscposController;
+use App\Http\Controllers\ReporteTurnoController;
 
 use App\Livewire\Register;
 
@@ -134,6 +135,9 @@ Route::middleware(['auth', 'tenant'])->group(function () {
     Route::get('/ticket/venta/{venta}',       [TicketController::class, 'venta'])->name('ticket.venta');
     Route::get('/ticket/cliente/{venta}/pdf', [TicketController::class, 'clientePdf'])->name('ticket.cliente.pdf');
     Route::get('/ticket/comanda/{venta}/pdf', [TicketController::class, 'comandaPdf'])->name('ticket.comanda.pdf');
+
+    // Reporte de turno en PDF
+    Route::get('/reporte/turno/{turno}/pdf', [ReporteTurnoController::class, 'pdf'])->name('reporte.turno.pdf');
 });
 
 // -- ESC/POS directo (agente print-agent) -------------------------------------

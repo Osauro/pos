@@ -60,10 +60,18 @@
                                                         </span>
                                                     @endif
                                                 </div>
-                                                <span class="text-muted">
-                                                    <i class="fa-solid fa-clock me-1"></i>
-                                                    {{ $turno->fecha_inicio->diffInDays($turno->fecha_fin) + 1 }} días
-                                                </span>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="text-muted">
+                                                        <i class="fa-solid fa-clock me-1"></i>
+                                                        {{ $turno->fecha_inicio->diffInDays($turno->fecha_fin) + 1 }} días
+                                                    </span>
+                                                    <a href="{{ route('reporte.turno.pdf', $turno) }}"
+                                                       target="_blank"
+                                                       class="btn btn-sm btn-outline-danger py-0 px-2"
+                                                       title="Descargar reporte PDF">
+                                                        <i class="fa-solid fa-file-pdf me-1"></i>PDF
+                                                    </a>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
