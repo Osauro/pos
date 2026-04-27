@@ -5,12 +5,18 @@
             <h5 class="mb-0 fw-bold">
                 <i class="fa-solid fa-print me-2"></i>Configuraci&oacute;n de Impresora
             </h5>
-            <button class="btn btn-primary btn-sm px-3"
-                    wire:click="guardar"
-                    wire:loading.attr="disabled">
-                <span wire:loading wire:target="guardar" class="spinner-border spinner-border-sm me-1"></span>
-                <i class="fa-solid fa-floppy-disk me-1"></i>Guardar
-            </button>
+            <div class="d-flex gap-2">
+                <button class="btn btn-danger btn-sm px-3"
+                        onclick="confirmarResetTenant()">
+                    <i class="fa-solid fa-trash-can me-1"></i>Resetear Tenant
+                </button>
+                <button class="btn btn-primary btn-sm px-3"
+                        wire:click="guardar"
+                        wire:loading.attr="disabled">
+                    <span wire:loading wire:target="guardar" class="spinner-border spinner-border-sm me-1"></span>
+                    <i class="fa-solid fa-floppy-disk me-1"></i>Guardar
+                </button>
+            </div>
         </div>
     </div>
 
@@ -153,3 +159,37 @@
     </div>
 
 </div>
+
+@script
+<script>
+    function confirmarResetTenant() {
+        Swal.fire({
+            icon: 'warning',
+            title: '¿Resetear todos los datos?',
+            html: `
+                <p class="text-muted small mb-3">Se eliminarán <strong>todas las ventas, turnos y movimientos</strong>.<br>
+                Los <strong>productos y usuarios</strong> se conservarán.</p>
+                <p class="small mb-1">Escribe <strong>RESET</strong> para confirmar:</p>
+                <input id="swal-reset-input" type="text" class="swal2-input" placeholder="RESET">
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Sí, resetear',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            preConfirm: () => {
+                const val = document.getElementById('swal-reset-input').value;
+                if (val !== 'RESET') {
+                    Swal.showValidationMessage('Debes escribir exactamente RESET para confirmar');
+                    return false;
+                }
+                return true;
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $wire.resetTenant();
+            }
+        });
+    }
+</script>
+@endscript

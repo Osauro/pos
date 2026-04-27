@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Helpers\TenantHelper;
 use App\Traits\WithPermisos;
 use App\Traits\WithSwal;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -92,6 +93,38 @@ class ConfiguracionImpresora extends Component
     {
         $this->printer_secret_key = bin2hex(random_bytes(32));
         $this->showSuccessNotification('Clave generada correctamente. No olvides guardar la configuración.');
+    }
+
+    /**
+     * Elimina todos los datos del tenant excepto productos y usuarios.
+     * Borra: ventas, venta_items, turnos, movimientos
+     * Resetea: total_vendido en productos
+     */
+    public function resetTenant(): void
+    {
+        if (!$this->esAdmin()) {
+            abort(403);
+        }
+
+        $tenantId = TenantHelper::currentId();
+        if (!$tenantId) return;
+
+        DB::transaction(function () use ($tenantId) {
+            // venta_items no tiene tenant_id, se borra via ventas
+            $ventaIds = DB::table('ventas')->where('tenant_id', $tenantId)->pluck('id');
+            if ($ventaIds->isNotEmpty()) {
+                DB::table('venta_items')->whereIn('venta_id', $ventaIds)->delete();
+            }
+
+            DB::table('ventas')->where('tenant_id', $tenantId)->delete();
+            DB::table('turnos')->where('tenant_id', $tenantId)->delete();
+            DB::table('movimientos')->where('tenant_id', $tenantId)->delete();
+
+            // Resetear contador de ventas en productos
+            DB::table('productos')->where('tenant_id', $tenantId)->update(['total_vendido' => 0]);
+        });
+
+        $this->showSuccessNotification('Datos del tenant reseteados correctamente.');
     }
 
     public function render()
