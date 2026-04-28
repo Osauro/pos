@@ -220,10 +220,11 @@ class ConfiguracionImpresora extends Component
         }
 
         DB::transaction(function () use ($tenantId, $turno, $hoy) {
-            // Ventas del turno activo (usando fecha o turno_id si existe)
+            // Solo ventas de HOY dentro del turno activo
             $ventaIds = DB::table('ventas')
                 ->where('tenant_id', $tenantId)
                 ->where('turno_id', $turno->id)
+                ->whereDate('fecha_hora', $hoy)
                 ->pluck('id');
 
             if ($ventaIds->isNotEmpty()) {
@@ -231,9 +232,10 @@ class ConfiguracionImpresora extends Component
                 DB::table('ventas')->whereIn('id', $ventaIds)->delete();
             }
 
-            // Movimientos del turno activo
+            // Movimientos de HOY dentro del turno activo
             DB::table('movimientos')
                 ->where('turno_id', $turno->id)
+                ->whereDate('created_at', $hoy)
                 ->delete();
         });
 
