@@ -152,12 +152,13 @@ class Pos extends Component
         $waEnabled = false;
         $turnoActivo = $this->getTurnoActivo();
         if ($turnoActivo?->encargado_id) {
-            $pivot = \App\Models\User::find($turnoActivo->encargado_id)
-                ->tenants()
+            // Siempre se usan las credenciales del encargado/admin del turno,
+            // independientemente de qué usuario esté operando el POS.
+            $encargado = \App\Models\User::find($turnoActivo->encargado_id);
+            $pivot = $encargado?->tenants()
                 ->wherePivot('tenant_id', \App\Helpers\TenantHelper::currentId())
                 ->first()?->pivot;
             $qrImagen  = $pivot?->qr_imagen;
-            $encargado = \App\Models\User::find($turnoActivo->encargado_id);
             $waEnabled = !empty($pivot?->wa_instance_id)
                       && !empty($pivot?->wa_api_token)
                       && !empty($encargado?->celular);
@@ -593,19 +594,13 @@ class Pos extends Component
     private function notificarVentaWhatsapp(?Turno $turno, float $efectivo, float $online): void
     {
         try {
-            if (!$turno?->encargado_id) return;
+            [$encargado, $pivot] = $this->getEncargadoWA($turno);
+            if (!$encargado || !$pivot) return;
 
-            $pivot = \App\Models\User::find($turno->encargado_id)
-                ->tenants()
-                ->wherePivot('tenant_id', \App\Helpers\TenantHelper::currentId())
-                ->first()?->pivot;
-
-            $encargado = \App\Models\User::find($turno->encargado_id);
-
-            if (!$pivot || !$pivot->wa_notify_ventas
+            if (!$pivot->wa_notify_ventas
                 || empty($pivot->wa_instance_id)
                 || empty($pivot->wa_api_token)
-                || empty($encargado?->celular)) {
+                || empty($encargado->celular)) {
                 return;
             }
 
@@ -637,18 +632,12 @@ class Pos extends Component
     {
         try {
             $turno = $this->getTurnoActivo();
-            if (!$turno?->encargado_id) return;
+            [$encargado, $pivot] = $this->getEncargadoWA($turno);
+            if (!$encargado || !$pivot) return;
 
-            $pivot = \App\Models\User::find($turno->encargado_id)
-                ->tenants()
-                ->wherePivot('tenant_id', \App\Helpers\TenantHelper::currentId())
-                ->first()?->pivot;
-
-            $encargado = \App\Models\User::find($turno->encargado_id);
-
-            if (!$pivot || empty($pivot->wa_instance_id)
+            if (empty($pivot->wa_instance_id)
                 || empty($pivot->wa_api_token)
-                || empty($encargado?->celular)) {
+                || empty($encargado->celular)) {
                 return;
             }
 
@@ -714,6 +703,25 @@ class Pos extends Component
         if ($this->venta_id) {
             Venta::where('id', $this->venta_id)->update(['total' => $this->total]);
         }
+    }
+
+    /**
+     * Devuelve [User $encargado, pivot] del admin del turno para envíos WA.
+     * Siempre usa encargado_id del turno, nunca Auth::id(),
+     * para que operadores también envíen al admin correspondiente.
+     *
+     * @return array{0: \App\Models\User|null, 1: mixed}
+     */
+    private function getEncargadoWA(?Turno $turno): array
+    {
+        if (!$turno?->encargado_id) return [null, null];
+
+        $encargado = \App\Models\User::find($turno->encargado_id);
+        $pivot = $encargado?->tenants()
+            ->wherePivot('tenant_id', \App\Helpers\TenantHelper::currentId())
+            ->first()?->pivot;
+
+        return [$encargado, $pivot];
     }
 
     private function getTurnoActivo(): ?Turno
