@@ -925,8 +925,12 @@
                 if (this.acumulado >= this.total) {
                     this.cambio = Math.round((this.acumulado - this.total) * 100) / 100;
                     this.onlinePagado = 0;
-                    this.fase = 'cambio';
                     $wire.procesarVenta(this.total, 0);
+                    if (this.cambio > 0) {
+                        this.fase = 'cambio';
+                    } else {
+                        this.cerrar();
+                    }
                 }
             },
 
@@ -934,8 +938,8 @@
                 const resto = this.pendiente();
                 this.cambio       = 0;
                 this.onlinePagado = 0;
-                this.fase = 'cambio';
                 $wire.procesarVenta(this.acumulado + resto, 0);
+                this.cerrar();
             },
 
             async pagarQR() {
@@ -948,7 +952,7 @@
                     this.fase = 'comprobante';
                     this.$nextTick(() => this.openCamera());
                 } else {
-                    this.fase = 'cambio';
+                    this.cerrar();
                 }
             },
 
