@@ -228,7 +228,7 @@
                             {{ empty($carrito) ? 'disabled' : '' }}>
                         <i class="fa-solid fa-ban"></i>
                     </button>
-                    <button wire:click="procesarVenta"
+                    <button @click="$dispatch('abrir-cobro', { total: {{ $total }} })"
                             wire:loading.attr="disabled"
                             wire:target="procesarVenta"
                             class="btn btn-success btn-lg fw-bold flex-fill"
@@ -257,7 +257,7 @@
                 <span class="pos-act__badge">{{ $totalItems }}</span>
             @endif
         </button>
-        <button wire:click="procesarVenta"
+        <button @click="$dispatch('abrir-cobro', { total: {{ $total }} })"
                 wire:loading.attr="disabled"
                 wire:target="procesarVenta"
                 class="pos-act pos-act--pay"
@@ -327,10 +327,405 @@
         </div>
     @endif
 
+    {{-- ══ OVERLAY COBRO ══ --}}
+    @php $qrUrl = $qrImagen ? asset('storage/' . $qrImagen) : null; @endphp
+    <div x-data="cobroOverlay(@js($qrUrl))"
+         x-show="abierto"
+         x-cloak
+         @abrir-cobro.window="abrir($event.detail.total)"
+         class="pos-cobro-overlay">
+
+        <div class="pos-cobro-panel" @click.stop>
+
+            {{-- Fase: cobrando --}}
+            <template x-if="fase === 'cobrando'">
+                <div class="pos-cobro-inner">
+
+                    {{-- Header --}}
+                    <div class="pos-cobro-header">
+                        <span class="pos-cobro-title">
+                            <i class="fa-solid fa-cash-register me-2"></i>Cobrar venta
+                        </span>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="pos-cobro-total-badge">
+                                Total: <strong x-text="'Bs. ' + total.toFixed(2)"></strong>
+                            </span>
+                            <button class="btn btn-sm btn-outline-secondary px-2 py-1" @click="cerrar()" title="Cancelar">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- Acumulado --}}
+                    <div class="pos-cobro-acumulado">
+                        <span class="pos-cobro-acumulado__label">Efectivo ingresado:</span>
+                        <span class="pos-cobro-acumulado__monto" x-text="'Bs. ' + acumulado.toFixed(2)"></span>
+                    </div>
+
+                    {{-- Layout: QR a la izquierda + billetes a la derecha --}}
+                    <div class="pos-cobro-layout">
+
+                        {{-- QR grande --}}
+                        <button class="pos-cobro-qr-btn" @click="pagarQR()">
+                            <div class="pos-cobro-qr-inner">
+                                <template x-if="qrUrl">
+                                    <img :src="qrUrl" alt="QR Pago" class="pos-cobro-qr-img">
+                                </template>
+                                <template x-if="!qrUrl">
+                                    <div class="pos-cobro-qr-empty">
+                                        <i class="fa-solid fa-qrcode fa-4x opacity-30"></i>
+                                        <span class="mt-2 small">Sin QR configurado</span>
+                                    </div>
+                                </template>
+                            </div>
+                            <div class="pos-cobro-qr-label">
+                                <i class="fa-solid fa-mobile-screen me-1"></i>Pago Online
+                            </div>
+                        </button>
+
+                        {{-- Billetes --}}
+                        <div class="pos-cobro-bills">
+                            <button class="billete billete--200" @click="agregar(200)">
+                                <div class="billete__corner billete__corner--tl">200</div>
+                                <div class="billete__corner billete__corner--br">200</div>
+                                <div class="billete__watermark">Bs</div>
+                                <div class="billete__center">
+                                    <span class="billete__val">200</span>
+                                    <span class="billete__cur">BOLIVIANOS</span>
+                                </div>
+                            </button>
+                            <button class="billete billete--100" @click="agregar(100)">
+                                <div class="billete__corner billete__corner--tl">100</div>
+                                <div class="billete__corner billete__corner--br">100</div>
+                                <div class="billete__watermark">Bs</div>
+                                <div class="billete__center">
+                                    <span class="billete__val">100</span>
+                                    <span class="billete__cur">BOLIVIANOS</span>
+                                </div>
+                            </button>
+                            <button class="billete billete--50" @click="agregar(50)">
+                                <div class="billete__corner billete__corner--tl">50</div>
+                                <div class="billete__corner billete__corner--br">50</div>
+                                <div class="billete__watermark">Bs</div>
+                                <div class="billete__center">
+                                    <span class="billete__val">50</span>
+                                    <span class="billete__cur">BOLIVIANOS</span>
+                                </div>
+                            </button>
+                            <button class="billete billete--20" @click="agregar(20)">
+                                <div class="billete__corner billete__corner--tl">20</div>
+                                <div class="billete__corner billete__corner--br">20</div>
+                                <div class="billete__watermark">Bs</div>
+                                <div class="billete__center">
+                                    <span class="billete__val">20</span>
+                                    <span class="billete__cur">BOLIVIANOS</span>
+                                </div>
+                            </button>
+                            <button class="billete billete--10" @click="agregar(10)">
+                                <div class="billete__corner billete__corner--tl">10</div>
+                                <div class="billete__corner billete__corner--br">10</div>
+                                <div class="billete__watermark">Bs</div>
+                                <div class="billete__center">
+                                    <span class="billete__val">10</span>
+                                    <span class="billete__cur">BOLIVIANOS</span>
+                                </div>
+                            </button>
+                            <button class="billete billete--exacto" @click="pagarExacto()">
+                                <div class="billete__watermark">✓</div>
+                                <div class="billete__center">
+                                    <span class="billete__val billete__val--sm" x-text="'Bs. ' + total.toFixed(2)"></span>
+                                    <span class="billete__cur">PAGO EXACTO</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </template>
+
+            {{-- Fase: cambio --}}
+            <template x-if="fase === 'cambio'">
+                <div class="pos-cobro-inner pos-cobro-inner--cambio">
+                    <div class="pos-cobro-check">
+                        <i class="fa-solid fa-circle-check fa-3x text-success"></i>
+                    </div>
+                    <p class="pos-cobro-cambio__title">Venta cobrada</p>
+                    <p class="pos-cobro-cambio__sub">Cambio a entregar</p>
+                    <div class="pos-cobro-cambio__monto" x-text="'Bs. ' + cambio.toFixed(2)"></div>
+                    <button class="btn btn-success btn-lg px-5 mt-3" @click="cerrar()">OK</button>
+                </div>
+            </template>
+
+        </div>
+    </div>
+
+    <style>
+        /* ── Overlay cobro ────────────────────────────────────────── */
+        .pos-cobro-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 2000;
+            background: rgba(0,0,0,.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: .75rem;
+        }
+        .pos-cobro-panel {
+            background: #1a1a2e;
+            border-radius: 1.25rem;
+            width: 100%;
+            max-width: 780px;
+            max-height: 96vh;
+            overflow-y: auto;
+            box-shadow: 0 24px 80px rgba(0,0,0,.6);
+        }
+        .pos-cobro-inner {
+            display: flex;
+            flex-direction: column;
+            padding: 1rem 1.25rem 1.25rem;
+        }
+        .pos-cobro-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: .6rem;
+        }
+        .pos-cobro-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+        .pos-cobro-total-badge {
+            background: #166534;
+            color: #bbf7d0;
+            border: 1px solid #22c55e44;
+            border-radius: .5rem;
+            padding: .2rem .65rem;
+            font-size: .88rem;
+        }
+        .pos-cobro-acumulado {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            background: #16213e;
+            border-radius: .5rem;
+            padding: .45rem 1rem;
+            margin-bottom: .85rem;
+            border: 1px solid #334155;
+        }
+        .pos-cobro-acumulado__label { font-size: .78rem; color: #94a3b8; }
+        .pos-cobro-acumulado__monto { font-size: 1.25rem; font-weight: 800; color: #60a5fa; margin-left: auto; }
+
+        /* ── Layout QR + billetes ── */
+        .pos-cobro-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .85rem;
+            align-items: start;
+        }
+        @media (max-width: 520px) {
+            .pos-cobro-layout { grid-template-columns: 1fr; }
+        }
+
+        /* ── QR grande ── */
+        .pos-cobro-qr-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #fff;
+            border: 3px solid #a78bfa;
+            border-radius: 1rem;
+            padding: .75rem .75rem .5rem;
+            cursor: pointer;
+            transition: border-color .15s, box-shadow .15s, transform .1s;
+            width: 100%;
+        }
+        .pos-cobro-qr-btn:hover {
+            border-color: #7c3aed;
+            box-shadow: 0 0 0 4px rgba(124,58,237,.25);
+        }
+        .pos-cobro-qr-btn:active { transform: scale(.97); }
+        .pos-cobro-qr-inner {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .pos-cobro-qr-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: .5rem;
+        }
+        .pos-cobro-qr-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #6d28d9;
+            padding: 2rem 0;
+        }
+        .pos-cobro-qr-label {
+            margin-top: .5rem;
+            font-size: .82rem;
+            font-weight: 700;
+            color: #7c3aed;
+            letter-spacing: .03em;
+        }
+
+        /* ── Billetes grid ── */
+        .pos-cobro-bills {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .55rem;
+        }
+
+        /* ── Base billete ── */
+        .billete {
+            position: relative;
+            overflow: hidden;
+            border-radius: .65rem;
+            border: none;
+            cursor: pointer;
+            padding: .6rem .5rem;
+            min-height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform .1s, box-shadow .1s, filter .1s;
+            box-shadow: 0 4px 12px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.15);
+        }
+        .billete:active { transform: scale(.93); filter: brightness(1.15); }
+        .billete:hover  { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.2); }
+
+        /* Borde interior decorativo */
+        .billete::before {
+            content: '';
+            position: absolute;
+            inset: 5px;
+            border: 1px dashed rgba(255,255,255,.25);
+            border-radius: .35rem;
+            pointer-events: none;
+        }
+
+        /* Marca de agua */
+        .billete__watermark {
+            position: absolute;
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: rgba(255,255,255,.08);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            user-select: none;
+            letter-spacing: -.05em;
+        }
+
+        /* Esquinas */
+        .billete__corner {
+            position: absolute;
+            font-size: .6rem;
+            font-weight: 700;
+            color: rgba(255,255,255,.55);
+            line-height: 1;
+        }
+        .billete__corner--tl { top: 7px; left: 8px; }
+        .billete__corner--br { bottom: 7px; right: 8px; }
+
+        /* Centro */
+        .billete__center {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1px;
+        }
+        .billete__val {
+            font-size: 1.9rem;
+            font-weight: 900;
+            color: #fff;
+            line-height: 1;
+            text-shadow: 0 2px 6px rgba(0,0,0,.4);
+            letter-spacing: -.02em;
+        }
+        .billete__val--sm { font-size: 1.1rem; }
+        .billete__cur {
+            font-size: .5rem;
+            font-weight: 700;
+            color: rgba(255,255,255,.7);
+            letter-spacing: .12em;
+            text-transform: uppercase;
+        }
+
+        /* Colores por denominación */
+        .billete--200 { background: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 50%, #991b1b 100%); }
+        .billete--100 { background: linear-gradient(135deg, #78350f 0%, #b45309 50%, #92400e 100%); }
+        .billete--50  { background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 50%, #1e40af 100%); }
+        .billete--20  { background: linear-gradient(135deg, #14532d 0%, #15803d 50%, #166534 100%); }
+        .billete--10  { background: linear-gradient(135deg, #713f12 0%, #a16207 50%, #854d0e 100%); }
+        .billete--exacto {
+            background: linear-gradient(135deg, #312e81 0%, #4f46e5 50%, #3730a3 100%);
+            grid-column: span 2;
+            min-height: 56px;
+        }
+        .billete--exacto .billete__watermark { font-size: 4rem; color: rgba(255,255,255,.06); }
+
+        /* Fase cambio */
+        .pos-cobro-inner--cambio { align-items: center; padding: 2.5rem 1.5rem; }
+        .pos-cobro-check { margin-bottom: 1rem; }
+        .pos-cobro-cambio__title { font-size: 1.15rem; font-weight: 700; color: #e2e8f0; margin: 0 0 .3rem; }
+        .pos-cobro-cambio__sub   { color: #94a3b8; font-size: .85rem; margin: 0 0 .5rem; }
+        .pos-cobro-cambio__monto { font-size: 3.2rem; font-weight: 900; color: #4ade80; line-height: 1; }
+    </style>
+
 </div>
 
 @script
 <script>
+    window.cobroOverlay = function (qrUrl) {
+        return {
+            qrUrl,
+            abierto: false,
+            fase: 'cobrando',
+            total: 0,
+            acumulado: 0,
+            cambio: 0,
+
+            abrir(total) {
+                this.total     = parseFloat(total) || 0;
+                this.acumulado = 0;
+                this.cambio    = 0;
+                this.fase      = 'cobrando';
+                this.abierto   = true;
+            },
+
+            cerrar() {
+                this.abierto = false;
+            },
+
+            agregar(monto) {
+                this.acumulado = Math.round((this.acumulado + monto) * 100) / 100;
+                if (this.acumulado >= this.total) {
+                    this.cambio = Math.round((this.acumulado - this.total) * 100) / 100;
+                    this.fase   = 'cambio';
+                    $wire.procesarVenta('efectivo', this.acumulado);
+                }
+            },
+
+            pagarExacto() {
+                $wire.procesarVenta('efectivo', this.total);
+                this.cerrar();
+            },
+
+            pagarQR() {
+                $wire.procesarVenta('online', this.total);
+                this.cerrar();
+            },
+        };
+    };
     // ── Persistir orden de productos (patrón paginate-bar) ──────────────────
     (function () {
         const LS_KEY  = 'pos_orden_productos';

@@ -3,16 +3,21 @@
 namespace App\Livewire;
 
 use App\Helpers\TenantHelper;
+use App\Models\User;
 use App\Traits\WithPermisos;
 use App\Traits\WithSwal;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Validate;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 #[Layout('layouts.theme.app')]
 class ConfiguracionImpresora extends Component
 {
-    use WithPermisos, WithSwal;
+    use WithPermisos, WithSwal, WithFileUploads;
 
     // Modo único: agente HTTP local (http://localhost:9876)
     private string $printer_modo = 'agent';
@@ -31,7 +36,10 @@ class ConfiguracionImpresora extends Component
     public bool   $printer_logo          = false;
     public bool   $printer_show_nombre   = true;
 
-
+    // QR de pago online
+    #[Validate('nullable|image|max:2048')]
+    public $qr_imagen_file = null;
+    public ?string $qr_imagen_actual = null;
 
     public function mount(): void
     {
@@ -53,6 +61,12 @@ class ConfiguracionImpresora extends Component
         $this->printer_width        = $tenant->printer_width        ?? '80';
         $this->printer_logo         = $tenant->printer_logo         ?? false;
         $this->printer_show_nombre  = $tenant->printer_show_nombre  ?? true;
+
+        // QR propio del admin en este tenant (pivot)
+        $pivot = User::find(Auth::id())->tenants()
+            ->wherePivot('tenant_id', $tenant->id)
+            ->first()?->pivot;
+        $this->qr_imagen_actual = $pivot?->qr_imagen ?? null;
     }
 
     public function guardar(): void
@@ -84,6 +98,49 @@ class ConfiguracionImpresora extends Component
         ]);
 
         $this->showSuccessNotification('Configuración guardada correctamente.');
+    }
+
+    public function guardarQR(): void
+    {
+        $this->validateOnly('qr_imagen_file', [
+            'qr_imagen_file' => 'nullable|image|max:2048',
+        ]);
+
+        $tenantId = TenantHelper::currentId();
+        if (!$tenantId) return;
+
+        if ($this->qr_imagen_file) {
+            // Borrar imagen anterior si existe
+            if ($this->qr_imagen_actual) {
+                Storage::disk('public')->delete($this->qr_imagen_actual);
+            }
+
+            $path = $this->qr_imagen_file->store('qr', 'public');
+
+            User::find(Auth::id())->tenants()->updateExistingPivot($tenantId, ['qr_imagen' => $path]);
+
+            $this->qr_imagen_actual = $path;
+            $this->qr_imagen_file   = null;
+        }
+
+        $this->showSuccessNotification('Imagen QR guardada correctamente.');
+    }
+
+    public function eliminarQR(): void
+    {
+        $tenantId = TenantHelper::currentId();
+        if (!$tenantId) return;
+
+        if ($this->qr_imagen_actual) {
+            Storage::disk('public')->delete($this->qr_imagen_actual);
+        }
+
+        User::find(Auth::id())->tenants()->updateExistingPivot($tenantId, ['qr_imagen' => null]);
+
+        $this->qr_imagen_actual = null;
+        $this->qr_imagen_file   = null;
+
+        $this->showSuccessNotification('Imagen QR eliminada.');
     }
 
     /**
