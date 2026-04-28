@@ -436,6 +436,15 @@
                                     <span class="billete__cur">BOLIVIANOS</span>
                                 </div>
                             </button>
+                            <button class="billete billete--5" @click="agregar(5)">
+                                <div class="billete__corner billete__corner--tl">5</div>
+                                <div class="billete__corner billete__corner--br">5</div>
+                                <div class="billete__watermark">Bs</div>
+                                <div class="billete__center">
+                                    <span class="billete__val">5</span>
+                                    <span class="billete__cur">BOLIVIANOS</span>
+                                </div>
+                            </button>
                             <button class="billete billete--exacto" @click="pagarExacto()">
                                 <div class="billete__watermark">✓</div>
                                 <div class="billete__center">
@@ -709,7 +718,7 @@
             border: none;
             cursor: pointer;
             padding: .6rem .5rem;
-            min-height: 72px;
+            min-height: 88px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -771,7 +780,7 @@
             text-shadow: 0 2px 6px rgba(0,0,0,.4);
             letter-spacing: -.02em;
         }
-        .billete__val--sm { font-size: 1.1rem; }
+        .billete__val--sm { font-size: 1.45rem; font-weight: 900; }
         .billete__cur {
             font-size: .5rem;
             font-weight: 700;
@@ -786,10 +795,11 @@
         .billete--50  { background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 50%, #1e40af 100%); }
         .billete--20  { background: linear-gradient(135deg, #14532d 0%, #15803d 50%, #166534 100%); }
         .billete--10  { background: linear-gradient(135deg, #713f12 0%, #a16207 50%, #854d0e 100%); }
+        .billete--5   { background: linear-gradient(135deg, #134e4a 0%, #0f766e 50%, #115e59 100%); }
         .billete--exacto {
             background: linear-gradient(135deg, #312e81 0%, #4f46e5 50%, #3730a3 100%);
             grid-column: span 2;
-            min-height: 56px;
+            min-height: 92px;
         }
         .billete--exacto .billete__watermark { font-size: 4rem; color: rgba(255,255,255,.06); }
 
