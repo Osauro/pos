@@ -529,8 +529,6 @@ class Pos extends Component
                     ->increment('total_vendido', $item['cantidad']);
             }
 
-            $this->showSuccessNotification('Venta completada. Total: Bs. ' . number_format($this->total, 2));
-
             // Guardar el ID antes de reiniciar el estado
             $ventaCompletadaId = $venta->id;
             $this->ultimaVentaNumero = $venta->numero_venta ?? 0;

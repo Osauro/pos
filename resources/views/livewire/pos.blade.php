@@ -332,6 +332,7 @@
     <div x-data="cobroOverlay(@js($qrUrl), @js($waEnabled))"
          x-show="abierto"
          x-cloak
+         wire:ignore
          @abrir-cobro.window="abrir($event.detail.total)"
          class="pos-cobro-overlay">
 
@@ -893,11 +894,11 @@
                 $wire.procesarVenta(this.acumulado + resto, 0);
             },
 
-            pagarQR() {
+            async pagarQR() {
                 const resto = this.pendiente();
                 this.onlinePagado = resto;
                 this.cambio       = 0;
-                $wire.procesarVenta(this.acumulado, resto);
+                await $wire.procesarVenta(this.acumulado, resto);
 
                 if (this.waEnabled) {
                     this.fase = 'comprobante';
