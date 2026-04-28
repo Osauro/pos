@@ -27,6 +27,7 @@ class Pos extends Component
     public $mostrar_selector = false;
     public bool $procesando = false;
     public bool $hay_fideo = true;
+    public int  $ultimaVentaNumero = 0;
 
     // ─── Inicio de caja ───────────────────────────────────────────────────────
     public bool $mostrar_modal_caja = false;
@@ -147,16 +148,21 @@ class Pos extends Component
             )
             ->get();
 
-        $qrImagen = null;
+        $qrImagen  = null;
+        $waEnabled = false;
         $turnoActivo = $this->getTurnoActivo();
         if ($turnoActivo?->encargado_id) {
-            $qrImagen = \App\Models\User::find($turnoActivo->encargado_id)
+            $pivot = \App\Models\User::find($turnoActivo->encargado_id)
                 ->tenants()
                 ->wherePivot('tenant_id', \App\Helpers\TenantHelper::currentId())
-                ->first()?->pivot?->qr_imagen;
+                ->first()?->pivot;
+            $qrImagen  = $pivot?->qr_imagen;
+            $waEnabled = !empty($pivot?->wa_instance_id)
+                      && !empty($pivot?->wa_api_token)
+                      && !empty($pivot?->wa_phone);
         }
 
-        return view('livewire.pos', compact('productos', 'qrImagen'));
+        return view('livewire.pos', compact('productos', 'qrImagen', 'waEnabled'));
     }
 
     public function setOrdenProductos(string $orden): void
@@ -527,6 +533,10 @@ class Pos extends Component
 
             // Guardar el ID antes de reiniciar el estado
             $ventaCompletadaId = $venta->id;
+            $this->ultimaVentaNumero = $venta->numero_venta ?? 0;
+
+            // Notificación WhatsApp (best-effort, no bloquea el flujo)
+            $this->notificarVentaWhatsapp($turnoActivo, $efectivo, $online);
 
             // Iniciar nueva venta pendiente
             $this->venta_id = null;
@@ -576,7 +586,87 @@ class Pos extends Component
         }
     }
 
-    // â”€â”€â”€ Cancelar venta â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── WhatsApp ─────────────────────────────────────────────────────────────
+
+    /**
+     * Envía el detalle de la venta al admin vía WhatsApp (best-effort).
+     */
+    private function notificarVentaWhatsapp(?Turno $turno, float $efectivo, float $online): void
+    {
+        try {
+            if (!$turno?->encargado_id) return;
+
+            $pivot = \App\Models\User::find($turno->encargado_id)
+                ->tenants()
+                ->wherePivot('tenant_id', \App\Helpers\TenantHelper::currentId())
+                ->first()?->pivot;
+
+            if (!$pivot || !$pivot->wa_notify_ventas
+                || empty($pivot->wa_instance_id)
+                || empty($pivot->wa_api_token)
+                || empty($pivot->wa_phone)) {
+                return;
+            }
+
+            $lineas = ["🧾 *Venta #{$this->ultimaVentaNumero} completada*\n"];
+            foreach ($this->carrito as $item) {
+                $sub = number_format($item['subtotal'] ?? ($item['precio'] * $item['cantidad']), 2);
+                $lineas[] = "• {$item['nombre']} x{$item['cantidad']} = Bs. {$sub}";
+            }
+            $lineas[] = "\n─────────────────";
+            $lineas[] = "*Total: Bs. " . number_format($this->total, 2) . "*";
+            if ($efectivo > 0) $lineas[] = "💵 Efectivo: Bs. " . number_format($efectivo, 2);
+            if ($online  > 0) $lineas[] = "📱 Online: Bs. "   . number_format($online,   2);
+
+            (new \App\Services\GreenApiService())->sendMessage(
+                $pivot->wa_instance_id,
+                $pivot->wa_api_token,
+                $pivot->wa_phone,
+                implode("\n", $lineas)
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('WA venta notify: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Recibe la foto del comprobante (base64) y la envía al admin del turno vía WA.
+     */
+    public function enviarComprobanteQR(string $base64): void
+    {
+        try {
+            $turno = $this->getTurnoActivo();
+            if (!$turno?->encargado_id) return;
+
+            $pivot = \App\Models\User::find($turno->encargado_id)
+                ->tenants()
+                ->wherePivot('tenant_id', \App\Helpers\TenantHelper::currentId())
+                ->first()?->pivot;
+
+            if (!$pivot || empty($pivot->wa_instance_id)
+                || empty($pivot->wa_api_token)
+                || empty($pivot->wa_phone)) {
+                return;
+            }
+
+            $caption = '📸 Comprobante de pago QR';
+            if ($this->ultimaVentaNumero) {
+                $caption .= " — Venta #{$this->ultimaVentaNumero}";
+            }
+
+            (new \App\Services\GreenApiService())->sendImageBase64(
+                $pivot->wa_instance_id,
+                $pivot->wa_api_token,
+                $pivot->wa_phone,
+                $base64,
+                $caption
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('WA comprobante: ' . $e->getMessage());
+        }
+    }
+
+    // ─── Cancelar venta ───────────────────────────────────────────────────────
     public function cancelarVenta(): void
     {
         try {

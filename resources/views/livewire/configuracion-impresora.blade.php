@@ -26,6 +26,11 @@
                 </button>
             </li>
             <li class="nav-item">
+                <button class="nav-link" :class="{ active: tab === 'whatsapp' }" @click="setTab('whatsapp')">
+                    <i class="fa-brands fa-whatsapp me-1"></i>WhatsApp
+                </button>
+            </li>
+            <li class="nav-item">
                 <button class="nav-link text-danger" :class="{ active: tab === 'peligro' }" @click="setTab('peligro')">
                     <i class="fa-solid fa-triangle-exclamation me-1"></i>Peligro
                 </button>
@@ -255,6 +260,97 @@
             </div>
         </div>
 
+        {{-- ═══════════════ TAB WHATSAPP ═══════════════ --}}
+        <div x-show="tab === 'whatsapp'" x-cloak>
+            <div class="row justify-content-center">
+                <div class="col-xl-5 col-lg-7 col-md-9">
+
+                    <div class="alert alert-info d-flex gap-3 align-items-start mb-3 py-2" style="font-size:.82rem;">
+                        <i class="fa-brands fa-whatsapp fa-lg mt-1 flex-shrink-0" style="color:#25d366"></i>
+                        <div>
+                            Usa <strong>Green API</strong> para recibir notificaciones de ventas en tu WhatsApp personal.
+                            Crea tu instancia gratuita en <strong>green-api.com</strong>.<br>
+                            El número de teléfono debe incluir código de país (ej: <code>59171234567</code>).
+                        </div>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="card-header py-2">
+                            <h6 class="mb-0 fw-semibold">
+                                <i class="fa-brands fa-whatsapp me-1" style="color:#25d366"></i>Credenciales Green API
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label small mb-1 fw-semibold">Instance ID</label>
+                                <input type="text"
+                                       class="form-control form-control-sm @error('wa_instance_id') is-invalid @enderror"
+                                       wire:model.blur="wa_instance_id"
+                                       placeholder="Ej: 1101234567">
+                                @error('wa_instance_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small mb-1 fw-semibold">API Token</label>
+                                <input type="text"
+                                       class="form-control form-control-sm @error('wa_api_token') is-invalid @enderror"
+                                       wire:model.blur="wa_api_token"
+                                       placeholder="Token de tu instancia Green API">
+                                @error('wa_api_token') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small mb-1 fw-semibold">Tu número de WhatsApp</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text"><i class="fa-solid fa-phone"></i></span>
+                                    <input type="text"
+                                           class="form-control @error('wa_phone') is-invalid @enderror"
+                                           wire:model.blur="wa_phone"
+                                           placeholder="59171234567 (con código de país)">
+                                </div>
+                                @error('wa_phone') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                <small class="text-muted">Solo dígitos, sin espacios ni guiones</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="card-header py-2">
+                            <h6 class="mb-0 fw-semibold">
+                                <i class="fa-solid fa-bell me-1"></i>Notificaciones
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="wa_notify_ventas"
+                                       wire:model="wa_notify_ventas">
+                                <label class="form-check-label" for="wa_notify_ventas">
+                                    <strong>Recibir detalle de cada venta</strong>
+                                    <div class="text-muted small">Te enviaré un mensaje por cada venta completada con el desglose de productos y montos.</div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button class="btn btn-outline-secondary btn-sm px-3"
+                                wire:click="probarWhatsapp"
+                                wire:loading.attr="disabled"
+                                wire:target="probarWhatsapp">
+                            <span wire:loading wire:target="probarWhatsapp" class="spinner-border spinner-border-sm me-1"></span>
+                            <i class="fa-solid fa-paper-plane me-1"></i>Enviar prueba
+                        </button>
+                        <button class="btn btn-primary btn-sm px-4"
+                                wire:click="guardarWhatsapp"
+                                wire:loading.attr="disabled"
+                                wire:target="guardarWhatsapp">
+                            <span wire:loading wire:target="guardarWhatsapp" class="spinner-border spinner-border-sm me-1"></span>
+                            <i class="fa-solid fa-floppy-disk me-1"></i>Guardar
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
         {{-- ═══════════════ TAB PELIGRO ═══════════════ --}}
         <div x-show="tab === 'peligro'" x-cloak>
             <div class="row justify-content-center">
@@ -305,7 +401,7 @@
             tab: 'impresora',
             init() {
                 const saved = localStorage.getItem('cfg_tab');
-                if (['impresora', 'qr', 'peligro'].includes(saved)) this.tab = saved;
+                if (['impresora', 'qr', 'whatsapp', 'peligro'].includes(saved)) this.tab = saved;
             },
             setTab(name) {
                 this.tab = name;

@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Helpers\TenantHelper;
 use App\Models\User;
+use App\Services\GreenApiService;
 use App\Traits\WithPermisos;
 use App\Traits\WithSwal;
 use Illuminate\Support\Facades\Auth;
@@ -41,6 +42,12 @@ class ConfiguracionImpresora extends Component
     public $qr_imagen_file = null;
     public ?string $qr_imagen_actual = null;
 
+    // WhatsApp — Green API
+    public string $wa_instance_id  = '';
+    public string $wa_api_token    = '';
+    public string $wa_phone        = '';
+    public bool   $wa_notify_ventas = false;
+
     public function mount(): void
     {
         if (!$this->esAdmin()) {
@@ -67,6 +74,12 @@ class ConfiguracionImpresora extends Component
             ->wherePivot('tenant_id', $tenant->id)
             ->first()?->pivot;
         $this->qr_imagen_actual = $pivot?->qr_imagen ?? null;
+
+        // WhatsApp
+        $this->wa_instance_id   = $pivot?->wa_instance_id  ?? '';
+        $this->wa_api_token     = $pivot?->wa_api_token    ?? '';
+        $this->wa_phone         = $pivot?->wa_phone        ?? '';
+        $this->wa_notify_ventas = (bool) ($pivot?->wa_notify_ventas ?? false);
     }
 
     public function guardar(): void
@@ -182,6 +195,49 @@ class ConfiguracionImpresora extends Component
         });
 
         $this->showSuccessNotification('Datos del tenant reseteados correctamente.');
+    }
+
+    public function guardarWhatsapp(): void
+    {
+        $this->validate([
+            'wa_instance_id'   => 'nullable|string|max:100',
+            'wa_api_token'     => 'nullable|string|max:100',
+            'wa_phone'         => ['nullable', 'string', 'max:25', 'regex:/^\d+$/'],
+            'wa_notify_ventas' => 'boolean',
+        ]);
+
+        $tenantId = TenantHelper::currentId();
+        if (!$tenantId) return;
+
+        User::find(Auth::id())->tenants()->updateExistingPivot($tenantId, [
+            'wa_instance_id'   => trim($this->wa_instance_id)  ?: null,
+            'wa_api_token'     => trim($this->wa_api_token)    ?: null,
+            'wa_phone'         => trim($this->wa_phone)        ?: null,
+            'wa_notify_ventas' => $this->wa_notify_ventas,
+        ]);
+
+        $this->showSuccessNotification('Configuración de WhatsApp guardada.');
+    }
+
+    public function probarWhatsapp(): void
+    {
+        if (empty($this->wa_instance_id) || empty($this->wa_api_token) || empty($this->wa_phone)) {
+            $this->showErrorNotification('Completa los campos de instancia, token y teléfono antes de probar.');
+            return;
+        }
+
+        $ok = (new GreenApiService())->sendMessage(
+            $this->wa_instance_id,
+            $this->wa_api_token,
+            $this->wa_phone,
+            "✅ *TPV* — Conexión WhatsApp funcionando correctamente."
+        );
+
+        if ($ok) {
+            $this->showSuccessNotification('Mensaje de prueba enviado correctamente.');
+        } else {
+            $this->showErrorNotification('No se pudo enviar el mensaje. Verifica la instancia y el token.');
+        }
     }
 
     public function render()

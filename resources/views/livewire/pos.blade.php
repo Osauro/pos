@@ -329,7 +329,7 @@
 
     {{-- ══ OVERLAY COBRO ══ --}}
     @php $qrUrl = $qrImagen ? asset('storage/' . $qrImagen) : null; @endphp
-    <div x-data="cobroOverlay(@js($qrUrl))"
+    <div x-data="cobroOverlay(@js($qrUrl), @js($waEnabled))"
          x-show="abierto"
          x-cloak
          @abrir-cobro.window="abrir($event.detail.total)"
@@ -478,6 +478,73 @@
                     </template>
 
                     <button class="btn btn-success btn-lg px-5 mt-3" @click="cerrar()">OK</button>
+                </div>
+            </template>
+
+            {{-- Fase: comprobante (cámara para foto del comprobante QR) --}}
+            <template x-if="fase === 'comprobante'">
+                <div class="pos-cobro-inner pos-cobro-inner--comprobante">
+
+                    <div class="pos-cobro-header">
+                        <span class="pos-cobro-title">
+                            <i class="fa-brands fa-whatsapp me-2" style="color:#25d366"></i>Comprobante de pago
+                        </span>
+                        <button class="btn btn-sm btn-outline-secondary px-2 py-1" @click="saltarFoto()" title="Omitir">
+                            Omitir <i class="fa-solid fa-forward ms-1"></i>
+                        </button>
+                    </div>
+
+                    <p class="text-muted small text-center mb-2">
+                        Toma foto del comprobante de pago del cliente para enviarlo al administrador por WhatsApp.
+                    </p>
+
+                    {{-- Área de cámara / preview --}}
+                    <div class="pos-cobro-camara">
+                        {{-- Video en vivo --}}
+                        <div x-show="!fotoBase64">
+                            <div x-show="cameraError" class="pos-cobro-camara__error">
+                                <i class="fa-solid fa-camera-slash fa-2x d-block mb-2"></i>
+                                <span x-text="cameraError"></span>
+                            </div>
+                            <video x-show="!cameraError"
+                                   data-wa-camera
+                                   autoplay
+                                   playsinline
+                                   muted
+                                   class="pos-cobro-camara__video"></video>
+                        </div>
+                        {{-- Preview foto capturada --}}
+                        <div x-show="fotoBase64">
+                            <img :src="fotoBase64" class="pos-cobro-camara__img" alt="Comprobante">
+                        </div>
+                    </div>
+
+                    {{-- Botones de acción --}}
+                    <div class="pos-cobro-camara__actions">
+                        <div x-show="!fotoBase64" class="d-flex justify-content-center">
+                            <button class="btn btn-primary btn-lg px-5"
+                                    @click="capturar()"
+                                    :disabled="!!cameraError">
+                                <i class="fa-solid fa-camera me-1"></i>Capturar
+                            </button>
+                        </div>
+                        <div x-show="fotoBase64" class="d-flex gap-2 justify-content-center">
+                            <button class="btn btn-outline-secondary px-4" @click="retomar()">
+                                <i class="fa-solid fa-rotate-left me-1"></i>Retomar
+                            </button>
+                            <button class="btn btn-success px-4"
+                                    @click="enviarFoto()"
+                                    :disabled="enviando">
+                                <span x-show="!enviando">
+                                    <i class="fa-brands fa-whatsapp me-1"></i>Enviar
+                                </span>
+                                <span x-show="enviando">
+                                    <i class="fa-solid fa-spinner fa-spin me-1"></i>Enviando...
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+
                 </div>
             </template>
 
@@ -704,6 +771,38 @@
         }
         .billete--exacto .billete__watermark { font-size: 4rem; color: rgba(255,255,255,.06); }
 
+        /* Fase comprobante */
+        .pos-cobro-inner--comprobante { padding: 1rem 1.25rem 1.25rem; }
+        .pos-cobro-camara {
+            width: 100%;
+            border-radius: .75rem;
+            overflow: hidden;
+            background: #000;
+            margin: .75rem 0;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .pos-cobro-camara__video {
+            width: 100%;
+            max-height: 55vh;
+            object-fit: cover;
+            display: block;
+        }
+        .pos-cobro-camara__img {
+            width: 100%;
+            max-height: 55vh;
+            object-fit: contain;
+            display: block;
+        }
+        .pos-cobro-camara__error {
+            color: #f87171;
+            text-align: center;
+            padding: 2rem;
+        }
+        .pos-cobro-camara__actions { margin-top: .5rem; }
+
         /* Fase cambio */
         .pos-cobro-inner--cambio { align-items: center; padding: 2.5rem 1.5rem; }
         .pos-cobro-check { margin-bottom: 1rem; }
@@ -738,30 +837,40 @@
 
 @script
 <script>
-    window.cobroOverlay = function (qrUrl) {
+    window.cobroOverlay = function (qrUrl, waEnabled) {
         return {
             qrUrl,
+            waEnabled,
             abierto: false,
             fase: 'cobrando',
             total: 0,
-            acumulado: 0,  // efectivo ingresado hasta ahora
+            acumulado: 0,
             cambio: 0,
             onlinePagado: 0,
+            // Cámara / comprobante
+            cameraStream: null,
+            fotoBase64: null,
+            cameraError: null,
+            enviando: false,
 
             abrir(total) {
-                this.total       = parseFloat(total) || 0;
-                this.acumulado   = 0;
-                this.cambio      = 0;
+                this.total        = parseFloat(total) || 0;
+                this.acumulado    = 0;
+                this.cambio       = 0;
                 this.onlinePagado = 0;
-                this.fase        = 'cobrando';
-                this.abierto     = true;
+                this.fotoBase64   = null;
+                this.cameraError  = null;
+                this.enviando     = false;
+                this.fase         = 'cobrando';
+                this.abierto      = true;
             },
 
             cerrar() {
-                this.abierto = false;
+                this.stopCamera();
+                this.fotoBase64 = null;
+                this.abierto    = false;
             },
 
-            // Pendiente en efectivo (lo que falta para cubrir el total)
             pendiente() {
                 return Math.max(0, Math.round((this.total - this.acumulado) * 100) / 100);
             },
@@ -776,22 +885,83 @@
                 }
             },
 
-            // Pago exacto en efectivo: cubre lo que queda (puede ser mixto)
             pagarExacto() {
                 const resto = this.pendiente();
-                this.cambio      = 0;
+                this.cambio       = 0;
                 this.onlinePagado = 0;
                 this.fase = 'cambio';
                 $wire.procesarVenta(this.acumulado + resto, 0);
             },
 
-            // QR: paga el pendiente online, efectivo = lo acumulado
             pagarQR() {
                 const resto = this.pendiente();
                 this.onlinePagado = resto;
                 this.cambio       = 0;
-                this.fase = 'cambio';
                 $wire.procesarVenta(this.acumulado, resto);
+
+                if (this.waEnabled) {
+                    this.fase = 'comprobante';
+                    this.$nextTick(() => this.openCamera());
+                } else {
+                    this.fase = 'cambio';
+                }
+            },
+
+            // ─── Cámara ───────────────────────────────────────────────────
+
+            async openCamera() {
+                this.cameraError = null;
+                try {
+                    this.cameraStream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: { ideal: 'environment' } },
+                        audio: false,
+                    });
+                    const video = document.querySelector('[data-wa-camera]');
+                    if (video) video.srcObject = this.cameraStream;
+                } catch (e) {
+                    this.cameraError = 'No se pudo acceder a la cámara: ' + (e.message || e.name);
+                }
+            },
+
+            stopCamera() {
+                if (this.cameraStream) {
+                    this.cameraStream.getTracks().forEach(t => t.stop());
+                    this.cameraStream = null;
+                }
+            },
+
+            capturar() {
+                const video = document.querySelector('[data-wa-camera]');
+                if (!video) return;
+                const canvas = document.createElement('canvas');
+                canvas.width  = video.videoWidth  || 640;
+                canvas.height = video.videoHeight || 480;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                this.fotoBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                this.stopCamera();
+            },
+
+            retomar() {
+                this.fotoBase64  = null;
+                this.cameraError = null;
+                this.$nextTick(() => this.openCamera());
+            },
+
+            async enviarFoto() {
+                this.enviando = true;
+                try {
+                    await $wire.enviarComprobanteQR(this.fotoBase64);
+                } catch (e) { /* best-effort */ }
+                this.stopCamera();
+                this.fotoBase64  = null;
+                this.enviando    = false;
+                this.fase        = 'cambio';
+            },
+
+            saltarFoto() {
+                this.stopCamera();
+                this.fotoBase64 = null;
+                this.fase       = 'cambio';
             },
         };
     };
