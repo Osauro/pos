@@ -496,13 +496,12 @@
                     </div>
 
                     <p class="text-muted small text-center mb-2">
-                        Toma foto del comprobante de pago del cliente para enviarlo al administrador por WhatsApp.
+                        Toma foto del comprobante del cliente para enviarlo al administrador por WhatsApp.
                     </p>
 
                     {{-- Área de cámara / preview --}}
                     <div class="pos-cobro-camara">
-                        {{-- Video en vivo --}}
-                        <div x-show="!fotoBase64">
+                        <div x-show="!fotoBase64" style="width:100%">
                             <div x-show="cameraError" class="pos-cobro-camara__error">
                                 <i class="fa-solid fa-camera-slash fa-2x d-block mb-2"></i>
                                 <span x-text="cameraError"></span>
@@ -514,35 +513,56 @@
                                    muted
                                    class="pos-cobro-camara__video"></video>
                         </div>
-                        {{-- Preview foto capturada --}}
-                        <div x-show="fotoBase64">
+                        <div x-show="fotoBase64" style="width:100%">
                             <img :src="fotoBase64" class="pos-cobro-camara__img" alt="Comprobante">
                         </div>
                     </div>
 
                     {{-- Botones de acción --}}
                     <div class="pos-cobro-camara__actions">
-                        <div x-show="!fotoBase64" class="d-flex justify-content-center">
-                            <button class="btn btn-primary btn-lg px-5"
+
+                        {{-- Sin foto: Capturar + Cambiar cámara --}}
+                        <div x-show="!fotoBase64" class="pos-cobro-camara__btn-row">
+                            <button class="pos-cobro-camara__btn pos-cobro-camara__btn--secondary"
+                                    @click="switchCamera()"
+                                    :disabled="!!cameraError"
+                                    title="Cambiar cámara">
+                                <i class="fa-solid fa-camera-rotate"></i>
+                                <span>Voltear</span>
+                            </button>
+                            <button class="pos-cobro-camara__btn pos-cobro-camara__btn--primary"
                                     @click="capturar()"
                                     :disabled="!!cameraError">
-                                <i class="fa-solid fa-camera me-1"></i>Capturar
+                                <i class="fa-solid fa-camera"></i>
+                                <span>Capturar</span>
                             </button>
                         </div>
-                        <div x-show="fotoBase64" class="d-flex gap-2 justify-content-center">
-                            <button class="btn btn-outline-secondary px-4" @click="retomar()">
-                                <i class="fa-solid fa-rotate-left me-1"></i>Retomar
+
+                        {{-- Con foto: Retomar + Enviar --}}
+                        <div x-show="fotoBase64" class="pos-cobro-camara__btn-row">
+                            <button class="pos-cobro-camara__btn pos-cobro-camara__btn--secondary"
+                                    @click="retomar()">
+                                <i class="fa-solid fa-rotate-left"></i>
+                                <span>Retomar</span>
                             </button>
-                            <button class="btn btn-success px-4"
+                            <button class="pos-cobro-camara__btn pos-cobro-camara__btn--success"
                                     @click="enviarFoto()"
                                     :disabled="enviando">
                                 <span x-show="!enviando">
-                                    <i class="fa-brands fa-whatsapp me-1"></i>Enviar
+                                    <i class="fa-brands fa-whatsapp"></i>
+                                    <span>Enviar</span>
                                 </span>
                                 <span x-show="enviando">
-                                    <i class="fa-solid fa-spinner fa-spin me-1"></i>Enviando...
+                                    <i class="fa-solid fa-spinner fa-spin"></i>
+                                    <span>Enviando...</span>
                                 </span>
                             </button>
+                        </div>
+
+                    </div>
+
+                </div>
+            </template>
                         </div>
                     </div>
 
@@ -802,21 +822,33 @@
             text-align: center;
             padding: 2rem;
         }
-        .pos-cobro-camara__actions { margin-top: .5rem; }
-
-        /* Fase cambio */
-        .pos-cobro-inner--cambio { align-items: center; padding: 2.5rem 1.5rem; }
-        .pos-cobro-check { margin-bottom: 1rem; }
-        .pos-cobro-cambio__title { font-size: 1.15rem; font-weight: 700; color: #e2e8f0; margin: 0 0 .3rem; }
-        .pos-cobro-cambio__sub   { color: #94a3b8; font-size: .85rem; margin: 0 0 .5rem; }
-        .pos-cobro-cambio__monto { font-size: 3.2rem; font-weight: 900; color: #4ade80; line-height: 1; }
-
-        /* Desglose pago mixto */
-        .pos-cobro-desglose {
-            background: #16213e;
-            border: 1px solid #334155;
-            border-radius: .6rem;
-            padding: .6rem 1rem;
+        .pos-cobro-camara__actions { margin-top: .75rem; }
+        .pos-cobro-camara__btn-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .6rem;
+        }
+        .pos-cobro-camara__btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: .35rem;
+            padding: .75rem .5rem;
+            border-radius: .65rem;
+            font-size: .82rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: filter .15s;
+            line-height: 1;
+        }
+        .pos-cobro-camara__btn i { font-size: 1.3rem; }
+        .pos-cobro-camara__btn:disabled { opacity: .45; cursor: not-allowed; }
+        .pos-cobro-camara__btn:not(:disabled):hover { filter: brightness(.9); }
+        .pos-cobro-camara__btn--primary  { background: #0d6efd; color: #fff; }
+        .pos-cobro-camara__btn--secondary { background: #e9ecef; color: #343a40; }
+        .pos-cobro-camara__btn--success   { background: #25d366; color: #fff; }
             margin: .5rem 0 .75rem;
             width: 100%;
             max-width: 240px;
@@ -862,6 +894,7 @@
                 this.fotoBase64   = null;
                 this.cameraError  = null;
                 this.enviando     = false;
+                this.currentFacing = 'user';
                 this.fase         = 'cobrando';
                 this.abierto      = true;
             },
@@ -909,6 +942,8 @@
             },
 
             // ─── Cámara ───────────────────────────────────────────────────
+            // Cámara activa: 'user' (frontal) por defecto, 'environment' (trasera)
+            currentFacing: 'user',
 
             async openCamera() {
                 this.cameraError = null;
@@ -917,15 +952,15 @@
                     const video = document.querySelector('[data-wa-camera]');
                     if (video) video.srcObject = stream;
                 };
-                // 1) Intentar cámara trasera
+                // 1) Cámara preferida (frontal por defecto)
                 try {
                     attach(await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: { exact: 'environment' } },
+                        video: { facingMode: { exact: this.currentFacing } },
                         audio: false,
                     }));
                     return;
                 } catch (_) { /* seguir con fallback */ }
-                // 2) Cualquier cámara disponible (frontal o única)
+                // 2) Cualquier cámara disponible
                 try {
                     attach(await navigator.mediaDevices.getUserMedia({
                         video: true,
@@ -934,6 +969,12 @@
                 } catch (e) {
                     this.cameraError = 'No se pudo acceder a la cámara: ' + (e.message || e.name);
                 }
+            },
+
+            async switchCamera() {
+                this.stopCamera();
+                this.currentFacing = this.currentFacing === 'user' ? 'environment' : 'user';
+                await this.openCamera();
             },
 
             stopCamera() {
