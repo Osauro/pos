@@ -50,6 +50,33 @@ class Pos extends Component
     {
         $this->hay_fideo = !$this->hay_fideo;
         session(['pos_hay_fideo' => $this->hay_fideo]);
+        $this->hay_fideo
+            ? $this->swalSuccess('Fideo activado', 'Se agregará opción de fideo a los platos.')
+            : $this->swalInfo('Sin fideo', 'La opción de fideo está desactivada.');
+    }
+
+    public function toggleAutoComanda(): void
+    {
+        $this->auto_comanda = !$this->auto_comanda;
+        $tenant = \App\Helpers\TenantHelper::current();
+        if ($tenant) {
+            $tenant->update(['printer_auto_comanda' => $this->auto_comanda]);
+        }
+        $this->auto_comanda
+            ? $this->swalSuccess('Comanda activada', 'Se imprimirá comanda automáticamente en cada venta.')
+            : $this->swalWarning('Comanda desactivada', 'No se imprimirá comanda automáticamente.');
+    }
+
+    public function toggleAutoTicket(): void
+    {
+        $this->auto_ticket = !$this->auto_ticket;
+        $tenant = \App\Helpers\TenantHelper::current();
+        if ($tenant) {
+            $tenant->update(['printer_auto_ticket' => $this->auto_ticket]);
+        }
+        $this->auto_ticket
+            ? $this->swalSuccess('Ticket activado', 'Se imprimirá ticket automáticamente en cada venta.')
+            : $this->swalWarning('Ticket desactivado', 'No se imprimirá ticket automáticamente.');
     }
 
     // â”€â”€â”€ Crea (o recupera) la venta Pendiente del usuario actual â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -175,6 +202,8 @@ class Pos extends Component
     public function setOrdenProductos(string $orden): void
     {
         $this->orden_productos = $orden;
+        $label = $orden === 'nombre' ? 'A-Z' : 'Más vendidos primero';
+        $this->swalInfo('Orden cambiado', "Mostrando productos: {$label}.");
     }
 
     // â”€â”€â”€ Agregar al carrito â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

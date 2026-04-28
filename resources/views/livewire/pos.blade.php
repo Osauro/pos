@@ -15,13 +15,13 @@
                 @endforeach
             </div>
             <div class="btn-group flex-shrink-0" role="group">
-                <button wire:click="$toggle('auto_comanda')"
+                <button wire:click="toggleAutoComanda"
                         title="{{ $auto_comanda ? 'Comanda ON' : 'Comanda OFF' }}"
                         class="btn btn-sm {{ $auto_comanda ? 'btn-success' : 'btn-outline-secondary' }}">
                     <i class="fa-solid fa-kitchen-set"></i>
                     <span class="d-none d-lg-inline ms-1">Comanda</span>
                 </button>
-                <button wire:click="$toggle('auto_ticket')"
+                <button wire:click="toggleAutoTicket"
                         title="{{ $auto_ticket ? 'Ticket ON' : 'Ticket OFF' }}"
                         class="btn btn-sm {{ $auto_ticket ? 'btn-success' : 'btn-outline-secondary' }}">
                     <i class="fa-solid fa-receipt"></i>
