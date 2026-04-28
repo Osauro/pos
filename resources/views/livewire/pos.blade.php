@@ -338,6 +338,14 @@
 
         <div class="pos-cobro-panel" @click.stop>
 
+            {{-- Overlay procesando --}}
+            <div x-show="procesando" x-cloak class="pos-cobro-procesando">
+                <div class="pos-cobro-procesando__inner">
+                    <div class="pos-cobro-procesando__spinner"></div>
+                    <span class="pos-cobro-procesando__label">Procesando pago...</span>
+                </div>
+            </div>
+
             {{-- Fase: cobrando --}}
             <template x-if="fase === 'cobrando'">
                 <div class="pos-cobro-inner">
@@ -602,6 +610,7 @@
             max-height: 96vh;
             overflow-y: auto;
             box-shadow: 0 24px 80px rgba(0,0,0,.6);
+            position: relative;
         }
         .pos-cobro-inner {
             display: flex;
@@ -875,6 +884,40 @@
         .pos-cobro-desglose__fila + .pos-cobro-desglose__fila {
             border-top: 1px solid #334155;
         }
+
+        /* ── Overlay procesando ── */
+        .pos-cobro-procesando {
+            position: absolute;
+            inset: 0;
+            border-radius: 1.25rem;
+            background: rgba(15, 15, 30, .88);
+            backdrop-filter: blur(4px);
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .pos-cobro-procesando__inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+        .pos-cobro-procesando__spinner {
+            width: 52px;
+            height: 52px;
+            border: 4px solid rgba(99,102,241,.25);
+            border-top-color: #6366f1;
+            border-radius: 50%;
+            animation: spin-overlay .7s linear infinite;
+        }
+        @keyframes spin-overlay { to { transform: rotate(360deg); } }
+        .pos-cobro-procesando__label {
+            color: #c7d2fe;
+            font-size: 1.05rem;
+            font-weight: 600;
+            letter-spacing: .03em;
+        }
     </style>
 
 </div>
@@ -896,6 +939,7 @@
             fotoBase64: null,
             cameraError: null,
             enviando: false,
+            procesando: false,
 
             abrir(total) {
                 this.total        = parseFloat(total) || 0;
@@ -905,6 +949,7 @@
                 this.fotoBase64   = null;
                 this.cameraError  = null;
                 this.enviando     = false;
+                this.procesando   = false;
                 this.currentFacing = 'user';
                 this.fase         = 'cobrando';
                 this.abierto      = true;
@@ -920,12 +965,14 @@
                 return Math.max(0, Math.round((this.total - this.acumulado) * 100) / 100);
             },
 
-            agregar(monto) {
+            async agregar(monto) {
                 this.acumulado = Math.round((this.acumulado + monto) * 100) / 100;
                 if (this.acumulado >= this.total) {
                     this.cambio = Math.round((this.acumulado - this.total) * 100) / 100;
                     this.onlinePagado = 0;
-                    $wire.procesarVenta(this.total, 0);
+                    this.procesando = true;
+                    try { await $wire.procesarVenta(this.total, 0); } catch(e) {}
+                    this.procesando = false;
                     if (this.cambio > 0) {
                         this.fase = 'cambio';
                     } else {
@@ -934,11 +981,13 @@
                 }
             },
 
-            pagarExacto() {
+            async pagarExacto() {
                 const resto = this.pendiente();
                 this.cambio       = 0;
                 this.onlinePagado = 0;
-                $wire.procesarVenta(this.acumulado + resto, 0);
+                this.procesando   = true;
+                try { await $wire.procesarVenta(this.acumulado + resto, 0); } catch(e) {}
+                this.procesando = false;
                 this.cerrar();
             },
 
@@ -946,7 +995,9 @@
                 const resto = this.pendiente();
                 this.onlinePagado = resto;
                 this.cambio       = 0;
-                await $wire.procesarVenta(this.acumulado, resto);
+                this.procesando   = true;
+                try { await $wire.procesarVenta(this.acumulado, resto); } catch(e) {}
+                this.procesando = false;
 
                 if (this.waEnabled) {
                     this.fase = 'comprobante';
