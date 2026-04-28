@@ -1007,16 +1007,12 @@
                 try {
                     await $wire.enviarComprobanteQR(this.fotoBase64);
                 } catch (e) { /* best-effort */ }
-                this.stopCamera();
-                this.fotoBase64  = null;
-                this.enviando    = false;
-                this.fase        = 'cambio';
+                this.enviando = false;
+                this.cerrar();
             },
 
             saltarFoto() {
-                this.stopCamera();
-                this.fotoBase64 = null;
-                this.fase       = 'cambio';
+                this.cerrar();
             },
         };
     };
