@@ -10,7 +10,7 @@
                     <button type="button"
                             wire:click="setTipoFiltro('{{ $cat }}')"
                             class="btn {{ $tipo_filtro === $cat ? 'btn-primary' : 'btn-outline-primary' }}">
-                        <i class="fa-solid {{ $ico }} me-1"></i>{{ $cat }}
+                        <i class="fa-solid {{ $ico }}"></i><span class="d-none d-sm-inline ms-1">{{ $cat }}</span>
                     </button>
                 @endforeach
             </div>
@@ -35,6 +35,18 @@
                         title="{{ $hay_fideo ? 'Hay fideo — clic para indicar que no hay' : 'Sin fideo — clic para activar fideo' }}">
                     🍝
                     <span class="d-none d-lg-inline ms-1">{{ $hay_fideo ? 'Fideo' : 'Sin fideo' }}</span>
+                </button>
+                <button wire:click="$toggle('auto_comanda')"
+                        title="{{ $auto_comanda ? 'Comanda ON' : 'Comanda OFF' }}"
+                        class="btn btn-sm {{ $auto_comanda ? 'btn-success' : 'btn-outline-secondary' }}">
+                    <i class="fa-solid fa-kitchen-set"></i>
+                    <span class="d-none d-lg-inline ms-1">Comanda</span>
+                </button>
+                <button wire:click="$toggle('auto_ticket')"
+                        title="{{ $auto_ticket ? 'Ticket ON' : 'Ticket OFF' }}"
+                        class="btn btn-sm {{ $auto_ticket ? 'btn-success' : 'btn-outline-secondary' }}">
+                    <i class="fa-solid fa-receipt"></i>
+                    <span class="d-none d-lg-inline ms-1">Ticket</span>
                 </button>
             </div>
         </div>
@@ -127,6 +139,7 @@
                         $totalPorciones = collect($carrito)->where('categoria','Porciones')->sum('cantidad');
                     @endphp
                     <div class="d-flex align-items-center gap-2">
+
                         @if($totalPlatos > 0)
                             <span class="badge rounded-pill px-3 py-2" style="background:#7c4b2a;font-size:.82rem">
                                 <i class="fa-solid fa-utensils me-1"></i>{{ $totalPlatos }}
@@ -613,6 +626,28 @@
             overflow-y: auto;
             box-shadow: 0 24px 80px rgba(0,0,0,.6);
             position: relative;
+        }
+
+        /* ── Toggles impresión ── */
+        .pos-print-toggle {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            border: 1.5px solid #dee2e6;
+            background: #f1f3f5;
+            color: #adb5bd;
+            font-size: .82rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background .15s, color .15s, border-color .15s;
+            padding: 0;
+        }
+        .pos-print-toggle--on {
+            background: #e7f5ee;
+            border-color: #20c997;
+            color: #0ca678;
         }
         .pos-cobro-inner {
             display: flex;

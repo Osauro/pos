@@ -28,6 +28,8 @@ class Pos extends Component
     public bool $procesando = false;
     public bool $hay_fideo = true;
     public int  $ultimaVentaNumero = 0;
+    public bool $auto_ticket  = true;
+    public bool $auto_comanda = true;
 
     // ─── Inicio de caja ───────────────────────────────────────────────────────
     public bool $mostrar_modal_caja = false;
@@ -38,6 +40,9 @@ class Pos extends Component
         $this->verificarAccesoPOS();
         $this->orden_productos = request()->cookie('pos_orden_productos', 'popularidad');
         $this->hay_fideo       = session('pos_hay_fideo', true);
+        $tenant = \App\Helpers\TenantHelper::current();
+        $this->auto_ticket  = $tenant?->printer_auto_ticket  ?? config('printer.auto_ticket',  true);
+        $this->auto_comanda = $tenant?->printer_auto_comanda ?? config('printer.auto_comanda', true);
         $this->iniciarVentaPendiente();
     }
 
@@ -562,7 +567,7 @@ class Pos extends Component
             $svc    = app(\App\Services\EscposPrintService::class);
             $tenant = \App\Helpers\TenantHelper::current();
 
-            if ($tenant?->printer_auto_comanda ?? config('printer.auto_comanda')) {
+            if ($this->auto_comanda) {
                 $built = $svc->buildComandaJob($ventaParaImprimir);
                 if ($built['ok']) {
                     $this->dispatch('print-agent',
@@ -572,7 +577,7 @@ class Pos extends Component
                 }
             }
 
-            if ($tenant?->printer_auto_ticket ?? config('printer.auto_ticket')) {
+            if ($this->auto_ticket) {
                 $built = $svc->buildTicketJob($ventaParaImprimir);
                 if ($built['ok']) {
                     $this->dispatch('print-agent',
