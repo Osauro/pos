@@ -147,10 +147,14 @@ class Pos extends Component
             )
             ->get();
 
-        $qrImagen = \App\Models\User::find(Auth::id())
-            ->tenants()
-            ->wherePivot('tenant_id', \App\Helpers\TenantHelper::currentId())
-            ->first()?->pivot?->qr_imagen;
+        $qrImagen = null;
+        $turnoActivo = $this->getTurnoActivo();
+        if ($turnoActivo?->encargado_id) {
+            $qrImagen = \App\Models\User::find($turnoActivo->encargado_id)
+                ->tenants()
+                ->wherePivot('tenant_id', \App\Helpers\TenantHelper::currentId())
+                ->first()?->pivot?->qr_imagen;
+        }
 
         return view('livewire.pos', compact('productos', 'qrImagen'));
     }
