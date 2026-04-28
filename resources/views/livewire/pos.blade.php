@@ -988,10 +988,36 @@
             capturar() {
                 const video = document.querySelector('[data-wa-camera]');
                 if (!video) return;
+
+                const vw = video.videoWidth  || 640;
+                const vh = video.videoHeight || 480;
+                // Rotar a vertical si la pantalla es portrait pero el video viene landscape (móvil)
+                const needsRotation = (window.innerHeight > window.innerWidth) && (vw > vh);
+
                 const canvas = document.createElement('canvas');
-                canvas.width  = video.videoWidth  || 640;
-                canvas.height = video.videoHeight || 480;
-                canvas.getContext('2d').drawImage(video, 0, 0);
+                const ctx    = canvas.getContext('2d');
+
+                if (needsRotation) {
+                    // Detectar sentido de rotación según orientación física del dispositivo
+                    const angle = screen.orientation ? screen.orientation.angle : (window.orientation ?? 90);
+                    const rotateCW = (angle === 270 || angle === -90);
+
+                    canvas.width  = vh; // portrait: ancho = alto original
+                    canvas.height = vw; // portrait: alto  = ancho original
+                    if (rotateCW) {
+                        ctx.translate(vh, 0);
+                        ctx.rotate(Math.PI / 2);
+                    } else {
+                        ctx.translate(0, vw);
+                        ctx.rotate(-Math.PI / 2);
+                    }
+                    ctx.drawImage(video, 0, 0, vw, vh);
+                } else {
+                    canvas.width  = vw;
+                    canvas.height = vh;
+                    ctx.drawImage(video, 0, 0);
+                }
+
                 this.fotoBase64 = canvas.toDataURL('image/jpeg', 0.7);
                 this.stopCamera();
             },
