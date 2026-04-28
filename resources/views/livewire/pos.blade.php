@@ -14,27 +14,29 @@
                     </button>
                 @endforeach
             </div>
-            <div class="btn-group flex-shrink-0" role="group" title="Ordenar productos">
+            <div class="btn-group flex-shrink-0" role="group">
                 <button type="button"
                         wire:click="setOrdenProductos('nombre')"
                         class="btn btn-sm {{ $orden_productos === 'nombre' ? 'btn-secondary' : 'btn-outline-secondary' }}"
                         title="Ordenar por nombre">
                     <i class="fa-solid fa-arrow-down-a-z"></i>
+                    <span class="d-none d-lg-inline ms-1">A-Z</span>
                 </button>
                 <button type="button"
                         wire:click="setOrdenProductos('popularidad')"
                         class="btn btn-sm {{ $orden_productos === 'popularidad' ? 'btn-warning' : 'btn-outline-secondary' }}"
                         title="Más vendidos primero">
                     <i class="fa-solid fa-fire"></i>
+                    <span class="d-none d-lg-inline ms-1">Popular</span>
+                </button>
+                <button type="button"
+                        wire:click="toggleHayFideo"
+                        class="btn btn-sm {{ $hay_fideo ? 'btn-success' : 'btn-outline-danger' }}"
+                        title="{{ $hay_fideo ? 'Hay fideo — clic para indicar que no hay' : 'Sin fideo — clic para activar fideo' }}">
+                    🍝
+                    <span class="d-none d-lg-inline ms-1">{{ $hay_fideo ? 'Fideo' : 'Sin fideo' }}</span>
                 </button>
             </div>
-            <button type="button"
-                    wire:click="toggleHayFideo"
-                    class="btn btn-sm flex-shrink-0 {{ $hay_fideo ? 'btn-success' : 'btn-outline-danger' }}"
-                    title="{{ $hay_fideo ? 'Hay fideo — clic para indicar que no hay' : 'Sin fideo — clic para activar fideo' }}">
-                🍝
-                <span class="d-none d-md-inline ms-1">{{ $hay_fideo ? 'Fideo' : 'Sin fideo' }}</span>
-            </button>
         </div>
     </div>
 
