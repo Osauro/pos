@@ -274,7 +274,26 @@ class ConfiguracionImpresora extends Component
             return;
         }
 
-        $ok = (new GreenApiService())->sendMessage(
+        $service = new GreenApiService();
+
+        // 1) Verificar estado de la instancia primero
+        $state = $service->getInstanceState($this->wa_instance_id, $this->wa_api_token);
+        $stateInstance = $state['stateInstance'] ?? null;
+
+        if ($stateInstance !== 'authorized') {
+            $msg = match ($stateInstance) {
+                'notAuthorized' => 'La instancia no está autorizada. Escanea el QR en green-api.com.',
+                'blocked'       => 'La instancia está bloqueada en Green API.',
+                'sleepMode'     => 'La instancia está en modo reposo. Actívala en green-api.com.',
+                null            => 'No se pudo conectar con Green API. Verifica el Instance ID y el Token.',
+                default         => "Estado de instancia: {$stateInstance}. Debe ser 'authorized'.",
+            };
+            $this->showErrorNotification($msg);
+            return;
+        }
+
+        // 2) Enviar mensaje de prueba
+        $ok = $service->sendMessage(
             $this->wa_instance_id,
             $this->wa_api_token,
             $celular,
@@ -284,7 +303,9 @@ class ConfiguracionImpresora extends Component
         if ($ok) {
             $this->showSuccessNotification('Mensaje de prueba enviado correctamente.');
         } else {
-            $this->showErrorNotification('No se pudo enviar el mensaje. Verifica la instancia y el token.');
+            $digits = preg_replace('/\D/', '', $celular);
+            if (strlen($digits) === 8) $digits = '591' . $digits;
+            $this->showErrorNotification("La instancia está activa pero no pudo enviar al número {$digits}. Revisa storage/logs/laravel.log");
         }
     }
 
