@@ -46,7 +46,6 @@ class ConfiguracionImpresora extends Component
     // WhatsApp — Green API
     public string $wa_instance_id  = '';
     public string $wa_api_token    = '';
-    public string $wa_phone        = '';
     public bool   $wa_notify_ventas = false;
 
     public function mount(): void
@@ -79,7 +78,6 @@ class ConfiguracionImpresora extends Component
         // WhatsApp
         $this->wa_instance_id   = $pivot?->wa_instance_id  ?? '';
         $this->wa_api_token     = $pivot?->wa_api_token    ?? '';
-        $this->wa_phone         = $pivot?->wa_phone        ?? '';
         $this->wa_notify_ventas = (bool) ($pivot?->wa_notify_ventas ?? false);
     }
 
@@ -247,7 +245,6 @@ class ConfiguracionImpresora extends Component
         $this->validate([
             'wa_instance_id'   => 'nullable|string|max:100',
             'wa_api_token'     => 'nullable|string|max:100',
-            'wa_phone'         => ['nullable', 'string', 'max:25', 'regex:/^\d+$/'],
             'wa_notify_ventas' => 'boolean',
         ]);
 
@@ -257,7 +254,6 @@ class ConfiguracionImpresora extends Component
         User::find(Auth::id())->tenants()->updateExistingPivot($tenantId, [
             'wa_instance_id'   => trim($this->wa_instance_id)  ?: null,
             'wa_api_token'     => trim($this->wa_api_token)    ?: null,
-            'wa_phone'         => trim($this->wa_phone)        ?: null,
             'wa_notify_ventas' => $this->wa_notify_ventas,
         ]);
 
@@ -266,15 +262,22 @@ class ConfiguracionImpresora extends Component
 
     public function probarWhatsapp(): void
     {
-        if (empty($this->wa_instance_id) || empty($this->wa_api_token) || empty($this->wa_phone)) {
-            $this->showErrorNotification('Completa los campos de instancia, token y teléfono antes de probar.');
+        if (empty($this->wa_instance_id) || empty($this->wa_api_token)) {
+            $this->showErrorNotification('Completa los campos de instancia y token antes de probar.');
+            return;
+        }
+
+        $admin = User::find(Auth::id());
+        $celular = $admin?->celular ?? '';
+        if (empty($celular)) {
+            $this->showErrorNotification('No tienes número de celular registrado en tu perfil.');
             return;
         }
 
         $ok = (new GreenApiService())->sendMessage(
             $this->wa_instance_id,
             $this->wa_api_token,
-            $this->wa_phone,
+            $celular,
             "✅ *TPV* — Conexión WhatsApp funcionando correctamente."
         );
 

@@ -157,9 +157,10 @@ class Pos extends Component
                 ->wherePivot('tenant_id', \App\Helpers\TenantHelper::currentId())
                 ->first()?->pivot;
             $qrImagen  = $pivot?->qr_imagen;
+            $encargado = \App\Models\User::find($turnoActivo->encargado_id);
             $waEnabled = !empty($pivot?->wa_instance_id)
                       && !empty($pivot?->wa_api_token)
-                      && !empty($pivot?->wa_phone);
+                      && !empty($encargado?->celular);
         }
 
         return view('livewire.pos', compact('productos', 'qrImagen', 'waEnabled'));
@@ -599,10 +600,12 @@ class Pos extends Component
                 ->wherePivot('tenant_id', \App\Helpers\TenantHelper::currentId())
                 ->first()?->pivot;
 
+            $encargado = \App\Models\User::find($turno->encargado_id);
+
             if (!$pivot || !$pivot->wa_notify_ventas
                 || empty($pivot->wa_instance_id)
                 || empty($pivot->wa_api_token)
-                || empty($pivot->wa_phone)) {
+                || empty($encargado?->celular)) {
                 return;
             }
 
@@ -619,7 +622,7 @@ class Pos extends Component
             (new \App\Services\GreenApiService())->sendMessage(
                 $pivot->wa_instance_id,
                 $pivot->wa_api_token,
-                $pivot->wa_phone,
+                $encargado->celular,
                 implode("\n", $lineas)
             );
         } catch (\Throwable $e) {
@@ -641,9 +644,11 @@ class Pos extends Component
                 ->wherePivot('tenant_id', \App\Helpers\TenantHelper::currentId())
                 ->first()?->pivot;
 
+            $encargado = \App\Models\User::find($turno->encargado_id);
+
             if (!$pivot || empty($pivot->wa_instance_id)
                 || empty($pivot->wa_api_token)
-                || empty($pivot->wa_phone)) {
+                || empty($encargado?->celular)) {
                 return;
             }
 
@@ -655,7 +660,7 @@ class Pos extends Component
             (new \App\Services\GreenApiService())->sendImageBase64(
                 $pivot->wa_instance_id,
                 $pivot->wa_api_token,
-                $pivot->wa_phone,
+                $encargado->celular,
                 $base64,
                 $caption
             );

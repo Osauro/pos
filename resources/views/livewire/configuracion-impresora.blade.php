@@ -268,9 +268,9 @@
                     <div class="alert alert-info d-flex gap-3 align-items-start mb-3 py-2" style="font-size:.82rem;">
                         <i class="fa-brands fa-whatsapp fa-lg mt-1 flex-shrink-0" style="color:#25d366"></i>
                         <div>
-                            Usa <strong>Green API</strong> para recibir notificaciones de ventas en tu WhatsApp personal.
+                            Usa <strong>Green API</strong> para recibir notificaciones de ventas en tu WhatsApp.
                             Crea tu instancia gratuita en <strong>green-api.com</strong>.<br>
-                            El número de teléfono debe incluir código de país (ej: <code>59171234567</code>).
+                            Las notificaciones se enviarán al número de celular de tu perfil (<strong>{{ auth()->user()->celular ?: 'sin celular registrado' }}</strong>).
                         </div>
                     </div>
 
@@ -296,18 +296,6 @@
                                        wire:model.blur="wa_api_token"
                                        placeholder="Token de tu instancia Green API">
                                 @error('wa_api_token') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label small mb-1 fw-semibold">Tu número de WhatsApp</label>
-                                <div class="input-group input-group-sm">
-                                    <span class="input-group-text"><i class="fa-solid fa-phone"></i></span>
-                                    <input type="text"
-                                           class="form-control @error('wa_phone') is-invalid @enderror"
-                                           wire:model.blur="wa_phone"
-                                           placeholder="59171234567 (con código de país)">
-                                </div>
-                                @error('wa_phone') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                <small class="text-muted">Solo dígitos, sin espacios ni guiones</small>
                             </div>
                         </div>
                     </div>
