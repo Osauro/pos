@@ -28,6 +28,13 @@
                     <i class="fa-solid fa-fire"></i>
                 </button>
             </div>
+            <button type="button"
+                    wire:click="toggleHayFideo"
+                    class="btn btn-sm flex-shrink-0 {{ $hay_fideo ? 'btn-success' : 'btn-outline-danger' }}"
+                    title="{{ $hay_fideo ? 'Hay fideo — clic para indicar que no hay' : 'Sin fideo — clic para activar fideo' }}">
+                🍝
+                <span class="d-none d-md-inline ms-1">{{ $hay_fideo ? 'Fideo' : 'Sin fideo' }}</span>
+            </button>
         </div>
     </div>
 

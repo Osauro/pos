@@ -26,6 +26,7 @@ class Pos extends Component
     public $producto_pendiente_id = null;
     public $mostrar_selector = false;
     public bool $procesando = false;
+    public bool $hay_fideo = true;
 
     // ─── Inicio de caja ───────────────────────────────────────────────────────
     public bool $mostrar_modal_caja = false;
@@ -35,7 +36,14 @@ class Pos extends Component
     {
         $this->verificarAccesoPOS();
         $this->orden_productos = request()->cookie('pos_orden_productos', 'popularidad');
+        $this->hay_fideo       = session('pos_hay_fideo', true);
         $this->iniciarVentaPendiente();
+    }
+
+    public function toggleHayFideo(): void
+    {
+        $this->hay_fideo = !$this->hay_fideo;
+        session(['pos_hay_fideo' => $this->hay_fideo]);
     }
 
     // â”€â”€â”€ Crea (o recupera) la venta Pendiente del usuario actual â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -171,6 +179,11 @@ class Pos extends Component
         $producto = Producto::find($productoId);
 
         if ($producto->tipo === 'Platos') {
+            if (!$this->hay_fideo) {
+                // Sin fideo: asumir arroz directamente
+                $this->addToCart($productoId, 'arroz');
+                return;
+            }
             $this->producto_pendiente_id = $productoId;
             $this->mostrar_selector = true;
             return;
