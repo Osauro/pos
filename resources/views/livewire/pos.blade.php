@@ -15,6 +15,18 @@
                 @endforeach
             </div>
             <div class="btn-group flex-shrink-0" role="group">
+                <button wire:click="$toggle('auto_comanda')"
+                        title="{{ $auto_comanda ? 'Comanda ON' : 'Comanda OFF' }}"
+                        class="btn btn-sm {{ $auto_comanda ? 'btn-success' : 'btn-outline-secondary' }}">
+                    <i class="fa-solid fa-kitchen-set"></i>
+                    <span class="d-none d-lg-inline ms-1">Comanda</span>
+                </button>
+                <button wire:click="$toggle('auto_ticket')"
+                        title="{{ $auto_ticket ? 'Ticket ON' : 'Ticket OFF' }}"
+                        class="btn btn-sm {{ $auto_ticket ? 'btn-success' : 'btn-outline-secondary' }}">
+                    <i class="fa-solid fa-receipt"></i>
+                    <span class="d-none d-lg-inline ms-1">Ticket</span>
+                </button>
                 <button type="button"
                         wire:click="setOrdenProductos('nombre')"
                         class="btn btn-sm {{ $orden_productos === 'nombre' ? 'btn-secondary' : 'btn-outline-secondary' }}"
@@ -35,18 +47,6 @@
                         title="{{ $hay_fideo ? 'Hay fideo — clic para indicar que no hay' : 'Sin fideo — clic para activar fideo' }}">
                     🍝
                     <span class="d-none d-lg-inline ms-1">{{ $hay_fideo ? 'Fideo' : 'Sin fideo' }}</span>
-                </button>
-                <button wire:click="$toggle('auto_comanda')"
-                        title="{{ $auto_comanda ? 'Comanda ON' : 'Comanda OFF' }}"
-                        class="btn btn-sm {{ $auto_comanda ? 'btn-success' : 'btn-outline-secondary' }}">
-                    <i class="fa-solid fa-kitchen-set"></i>
-                    <span class="d-none d-lg-inline ms-1">Comanda</span>
-                </button>
-                <button wire:click="$toggle('auto_ticket')"
-                        title="{{ $auto_ticket ? 'Ticket ON' : 'Ticket OFF' }}"
-                        class="btn btn-sm {{ $auto_ticket ? 'btn-success' : 'btn-outline-secondary' }}">
-                    <i class="fa-solid fa-receipt"></i>
-                    <span class="d-none d-lg-inline ms-1">Ticket</span>
                 </button>
             </div>
         </div>
