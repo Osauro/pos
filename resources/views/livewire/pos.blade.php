@@ -911,13 +911,25 @@
 
             async openCamera() {
                 this.cameraError = null;
-                try {
-                    this.cameraStream = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: { ideal: 'environment' } },
-                        audio: false,
-                    });
+                const attach = (stream) => {
+                    this.cameraStream = stream;
                     const video = document.querySelector('[data-wa-camera]');
-                    if (video) video.srcObject = this.cameraStream;
+                    if (video) video.srcObject = stream;
+                };
+                // 1) Intentar cámara trasera
+                try {
+                    attach(await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: { exact: 'environment' } },
+                        audio: false,
+                    }));
+                    return;
+                } catch (_) { /* seguir con fallback */ }
+                // 2) Cualquier cámara disponible (frontal o única)
+                try {
+                    attach(await navigator.mediaDevices.getUserMedia({
+                        video: true,
+                        audio: false,
+                    }));
                 } catch (e) {
                     this.cameraError = 'No se pudo acceder a la cámara: ' + (e.message || e.name);
                 }
