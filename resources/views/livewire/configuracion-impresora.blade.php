@@ -364,6 +364,26 @@
                         </div>
                     </div>
 
+                    <div class="card border-warning mb-3">
+                        <div class="card-header bg-warning bg-opacity-10 py-2">
+                            <h6 class="mb-0 fw-semibold text-warning">
+                                <i class="fa-solid fa-calendar-xmark me-1"></i>Resetear el día actual
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-1"><strong>¿Qué se elimina?</strong></p>
+                            <ul class="small text-muted mb-3 ps-3">
+                                <li>Todas las <strong>ventas</strong> e ítems de venta del turno activo hoy</li>
+                                <li>Todos los <strong>movimientos</strong> de caja del turno activo hoy</li>
+                            </ul>
+                            <p class="text-muted small mb-3"><strong>¿Qué se conserva?</strong> El turno, productos, usuarios, configuración y datos de días anteriores.</p>
+                            <button class="btn btn-warning w-100"
+                                    onclick="confirmarResetDia()">
+                                <i class="fa-solid fa-calendar-xmark me-1"></i>Resetear ventas del día
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="card border-danger">
                         <div class="card-header bg-danger bg-opacity-10 py-2">
                             <h6 class="mb-0 fw-semibold text-danger">
@@ -436,6 +456,36 @@
         }).then((result) => {
             if (result.isConfirmed) {
                 $wire.resetTenant();
+            }
+        });
+    };
+
+    window.confirmarResetDia = function() {
+        Swal.fire({
+            icon: 'warning',
+            title: '¿Resetear el día actual?',
+            html: `
+                <p class="text-muted small mb-3">Se eliminarán las <strong>ventas y movimientos</strong> del turno activo de hoy.<br>
+                El turno, productos y datos de días anteriores <strong>se conservarán</strong>.</p>
+                <p class="small mb-1">Escribe <strong>RESET</strong> para confirmar:</p>
+                <input id="swal-reset-dia-input" type="text" class="swal2-input" placeholder="RESET">
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Sí, resetear el día',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#ffc107',
+            cancelButtonColor: '#6c757d',
+            preConfirm: () => {
+                const val = document.getElementById('swal-reset-dia-input').value;
+                if (val !== 'RESET') {
+                    Swal.showValidationMessage('Debes escribir exactamente RESET para confirmar');
+                    return false;
+                }
+                return true;
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $wire.resetDia();
             }
         });
     };

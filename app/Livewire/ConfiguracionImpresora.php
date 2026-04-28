@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\GreenApiService;
 use App\Traits\WithPermisos;
 use App\Traits\WithSwal;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -195,6 +196,50 @@ class ConfiguracionImpresora extends Component
         });
 
         $this->showSuccessNotification('Datos del tenant reseteados correctamente.');
+    }
+
+    public function resetDia(): void
+    {
+        if (!$this->esAdmin()) {
+            abort(403);
+        }
+
+        $tenantId = TenantHelper::currentId();
+        if (!$tenantId) return;
+
+        $hoy = Carbon::today()->toDateString();
+
+        // Buscar el turno activo hoy
+        $turno = DB::table('turnos')
+            ->where('tenant_id', $tenantId)
+            ->where('fecha_inicio', '<=', $hoy)
+            ->where('fecha_fin', '>=', $hoy)
+            ->first();
+
+        if (!$turno) {
+            $this->swalWarning('Sin turno activo', 'No hay ningún turno activo hoy. No hay datos que borrar.');
+            return;
+        }
+
+        DB::transaction(function () use ($tenantId, $turno, $hoy) {
+            // Ventas del turno activo (usando fecha o turno_id si existe)
+            $ventaIds = DB::table('ventas')
+                ->where('tenant_id', $tenantId)
+                ->where('turno_id', $turno->id)
+                ->pluck('id');
+
+            if ($ventaIds->isNotEmpty()) {
+                DB::table('venta_items')->whereIn('venta_id', $ventaIds)->delete();
+                DB::table('ventas')->whereIn('id', $ventaIds)->delete();
+            }
+
+            // Movimientos del turno activo
+            DB::table('movimientos')
+                ->where('turno_id', $turno->id)
+                ->delete();
+        });
+
+        $this->showSuccessNotification('Ventas y movimientos del día eliminados correctamente.');
     }
 
     public function guardarWhatsapp(): void
