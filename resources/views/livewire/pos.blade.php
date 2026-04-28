@@ -470,9 +470,9 @@
             <template x-if="fase === 'cambio'">
                 <div class="pos-cobro-inner pos-cobro-inner--cambio">
                     <div class="pos-cobro-check">
-                        <i class="fa-solid fa-circle-check fa-3x text-success"></i>
+                        <i class="fa-solid fa-circle-check pos-cobro-check__icon"></i>
                     </div>
-                    <p class="pos-cobro-cambio__title">Venta cobrada</p>
+                    <p class="pos-cobro-cambio__title">¡Venta cobrada!</p>
 
                     {{-- Pago mixto: desglose --}}
                     <template x-if="onlinePagado > 0 && acumulado > 0">
@@ -489,13 +489,15 @@
                     </template>
 
                     <template x-if="cambio > 0">
-                        <div>
+                        <div class="pos-cobro-cambio__card">
                             <p class="pos-cobro-cambio__sub">Cambio a entregar</p>
                             <div class="pos-cobro-cambio__monto" x-text="'Bs. ' + cambio.toFixed(2)"></div>
                         </div>
                     </template>
 
-                    <button class="btn btn-success btn-lg px-5 mt-3" @click="cerrar()">OK</button>
+                    <button class="pos-cobro-cambio__ok" @click="cerrar()">
+                        <i class="fa-solid fa-check me-2"></i>OK
+                    </button>
                 </div>
             </template>
 
@@ -617,6 +619,67 @@
             flex-direction: column;
             padding: 1rem 1.25rem 1.25rem;
         }
+        .pos-cobro-inner--cambio {
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem 1.5rem 2.5rem;
+            gap: .5rem;
+        }
+        /* Ícono check grande */
+        .pos-cobro-check__icon {
+            font-size: 4.5rem;
+            color: #22c55e;
+            filter: drop-shadow(0 0 18px rgba(34,197,94,.5));
+        }
+        /* Título venta cobrada */
+        .pos-cobro-cambio__title {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: #f1f5f9;
+            margin: .25rem 0 0;
+            letter-spacing: -.02em;
+        }
+        /* Tarjeta de cambio */
+        .pos-cobro-cambio__card {
+            background: #fef08a22;
+            border: 2px solid #fde047;
+            border-radius: 1rem;
+            padding: 1rem 2rem;
+            margin-top: .75rem;
+            width: 100%;
+        }
+        .pos-cobro-cambio__sub {
+            font-size: .85rem;
+            font-weight: 600;
+            color: #fde047;
+            text-transform: uppercase;
+            letter-spacing: .1em;
+            margin: 0 0 .25rem;
+        }
+        .pos-cobro-cambio__monto {
+            font-size: 3rem;
+            font-weight: 900;
+            color: #fef08a;
+            line-height: 1;
+            letter-spacing: -.02em;
+            text-shadow: 0 2px 12px rgba(254,240,138,.4);
+        }
+        /* Botón OK */
+        .pos-cobro-cambio__ok {
+            margin-top: 1.25rem;
+            background: #16a34a;
+            color: #fff;
+            border: none;
+            border-radius: .75rem;
+            font-size: 1.15rem;
+            font-weight: 700;
+            padding: .75rem 3rem;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(22,163,74,.4);
+            transition: transform .1s, filter .1s;
+        }
+        .pos-cobro-cambio__ok:active { transform: scale(.95); filter: brightness(1.1); }
         .pos-cobro-header {
             display: flex;
             align-items: center;
