@@ -360,6 +360,11 @@
                     <div class="pos-cobro-acumulado">
                         <span class="pos-cobro-acumulado__label">Efectivo ingresado:</span>
                         <span class="pos-cobro-acumulado__monto" x-text="'Bs. ' + acumulado.toFixed(2)"></span>
+                        <template x-if="acumulado > 0 && acumulado < total">
+                            <span class="pos-cobro-acumulado__pendiente">
+                                Pendiente: <strong x-text="'Bs. ' + pendiente().toFixed(2)"></strong>
+                            </span>
+                        </template>
                     </div>
 
                     {{-- Layout: QR a la izquierda + billetes a la derecha --}}
@@ -450,8 +455,28 @@
                         <i class="fa-solid fa-circle-check fa-3x text-success"></i>
                     </div>
                     <p class="pos-cobro-cambio__title">Venta cobrada</p>
-                    <p class="pos-cobro-cambio__sub">Cambio a entregar</p>
-                    <div class="pos-cobro-cambio__monto" x-text="'Bs. ' + cambio.toFixed(2)"></div>
+
+                    {{-- Pago mixto: desglose --}}
+                    <template x-if="onlinePagado > 0 && acumulado > 0">
+                        <div class="pos-cobro-desglose">
+                            <div class="pos-cobro-desglose__fila">
+                                <span><i class="fa-solid fa-money-bill me-1"></i>Efectivo</span>
+                                <strong x-text="'Bs. ' + acumulado.toFixed(2)"></strong>
+                            </div>
+                            <div class="pos-cobro-desglose__fila">
+                                <span><i class="fa-solid fa-mobile-screen me-1"></i>Online</span>
+                                <strong x-text="'Bs. ' + onlinePagado.toFixed(2)"></strong>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template x-if="cambio > 0">
+                        <div>
+                            <p class="pos-cobro-cambio__sub">Cambio a entregar</p>
+                            <div class="pos-cobro-cambio__monto" x-text="'Bs. ' + cambio.toFixed(2)"></div>
+                        </div>
+                    </template>
+
                     <button class="btn btn-success btn-lg px-5 mt-3" @click="cerrar()">OK</button>
                 </div>
             </template>
@@ -516,6 +541,12 @@
         }
         .pos-cobro-acumulado__label { font-size: .78rem; color: #94a3b8; }
         .pos-cobro-acumulado__monto { font-size: 1.25rem; font-weight: 800; color: #60a5fa; margin-left: auto; }
+        .pos-cobro-acumulado__pendiente {
+            font-size: .75rem;
+            color: #fbbf24;
+            white-space: nowrap;
+            margin-left: .5rem;
+        }
 
         /* ── Layout QR + billetes ── */
         .pos-cobro-layout {
@@ -679,6 +710,28 @@
         .pos-cobro-cambio__title { font-size: 1.15rem; font-weight: 700; color: #e2e8f0; margin: 0 0 .3rem; }
         .pos-cobro-cambio__sub   { color: #94a3b8; font-size: .85rem; margin: 0 0 .5rem; }
         .pos-cobro-cambio__monto { font-size: 3.2rem; font-weight: 900; color: #4ade80; line-height: 1; }
+
+        /* Desglose pago mixto */
+        .pos-cobro-desglose {
+            background: #16213e;
+            border: 1px solid #334155;
+            border-radius: .6rem;
+            padding: .6rem 1rem;
+            margin: .5rem 0 .75rem;
+            width: 100%;
+            max-width: 240px;
+        }
+        .pos-cobro-desglose__fila {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #e2e8f0;
+            font-size: .88rem;
+            padding: .2rem 0;
+        }
+        .pos-cobro-desglose__fila + .pos-cobro-desglose__fila {
+            border-top: 1px solid #334155;
+        }
     </style>
 
 </div>
@@ -691,38 +744,54 @@
             abierto: false,
             fase: 'cobrando',
             total: 0,
-            acumulado: 0,
+            acumulado: 0,  // efectivo ingresado hasta ahora
             cambio: 0,
+            onlinePagado: 0,
 
             abrir(total) {
-                this.total     = parseFloat(total) || 0;
-                this.acumulado = 0;
-                this.cambio    = 0;
-                this.fase      = 'cobrando';
-                this.abierto   = true;
+                this.total       = parseFloat(total) || 0;
+                this.acumulado   = 0;
+                this.cambio      = 0;
+                this.onlinePagado = 0;
+                this.fase        = 'cobrando';
+                this.abierto     = true;
             },
 
             cerrar() {
                 this.abierto = false;
             },
 
+            // Pendiente en efectivo (lo que falta para cubrir el total)
+            pendiente() {
+                return Math.max(0, Math.round((this.total - this.acumulado) * 100) / 100);
+            },
+
             agregar(monto) {
                 this.acumulado = Math.round((this.acumulado + monto) * 100) / 100;
                 if (this.acumulado >= this.total) {
                     this.cambio = Math.round((this.acumulado - this.total) * 100) / 100;
-                    this.fase   = 'cambio';
-                    $wire.procesarVenta('efectivo', this.acumulado);
+                    this.onlinePagado = 0;
+                    this.fase = 'cambio';
+                    $wire.procesarVenta(this.total, 0);
                 }
             },
 
+            // Pago exacto en efectivo: cubre lo que queda (puede ser mixto)
             pagarExacto() {
-                $wire.procesarVenta('efectivo', this.total);
-                this.cerrar();
+                const resto = this.pendiente();
+                this.cambio      = 0;
+                this.onlinePagado = 0;
+                this.fase = 'cambio';
+                $wire.procesarVenta(this.acumulado + resto, 0);
             },
 
+            // QR: paga el pendiente online, efectivo = lo acumulado
             pagarQR() {
-                $wire.procesarVenta('online', this.total);
-                this.cerrar();
+                const resto = this.pendiente();
+                this.onlinePagado = resto;
+                this.cambio       = 0;
+                this.fase = 'cambio';
+                $wire.procesarVenta(this.acumulado, resto);
             },
         };
     };

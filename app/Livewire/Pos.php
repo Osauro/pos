@@ -478,7 +478,7 @@ class Pos extends Component
     }
 
     // â”€â”€â”€ Completar venta â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    public function procesarVenta(string $tipoPago = 'efectivo', float $montoIngresado = 0): void
+    public function procesarVenta(float $efectivo = 0, float $online = 0): void
     {
         if (empty($this->carrito)) {
             $this->showErrorNotification('El carrito está vacío');
@@ -493,9 +493,6 @@ class Pos extends Component
 
             $venta = Venta::findOrFail($this->venta_id);
             $turnoActivo = $this->getTurnoActivo();
-
-            $efectivo = $tipoPago === 'efectivo' ? $this->total : 0;
-            $online   = $tipoPago === 'online'   ? $this->total : 0;
 
             // Marcar como Completo
             $venta->update([
