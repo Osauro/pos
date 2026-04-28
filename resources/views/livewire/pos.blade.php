@@ -511,6 +511,7 @@
                                    autoplay
                                    playsinline
                                    muted
+                                   :style="currentFacing === 'user' ? 'transform:scaleX(-1)' : ''"
                                    class="pos-cobro-camara__video"></video>
                         </div>
                         <div x-show="fotoBase64" style="width:100%">
