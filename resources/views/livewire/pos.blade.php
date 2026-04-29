@@ -53,6 +53,7 @@
     <style>
         .bottom-nav        { display: none !important; }
         .pos-action-btn    { min-width: 2.8rem; }
+        @media (min-width: 992px) { .pos-action-btn { width: 7rem; } }
         .page-body         { padding: 0 !important; overflow: hidden !important; }
         .page-body-wrapper { overflow: hidden !important; }
         html, body         { overflow: hidden !important; height: 100% !important; }
