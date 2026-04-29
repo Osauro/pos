@@ -1022,6 +1022,19 @@
 
 @script
 <script>
+    // Garantiza que playSound esté disponible sin importar el orden de carga
+    if (typeof window.playSound !== 'function') {
+        const _sc = {};
+        window.playSound = function (name) {
+            try {
+                if (!_sc[name]) _sc[name] = new Audio(`/storage/sounds/${name}.mp3`);
+                const a = _sc[name];
+                a.currentTime = 0;
+                a.play().catch(() => {});
+            } catch (e) {}
+        };
+    }
+
     window.cobroOverlay = function (qrUrl, waEnabled) {
         return {
             qrUrl,
