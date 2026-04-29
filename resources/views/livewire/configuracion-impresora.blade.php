@@ -31,6 +31,11 @@
                 </button>
             </li>
             <li class="nav-item">
+                <button class="nav-link" :class="{ active: tab === 'horario' }" @click="setTab('horario')">
+                    <i class="fa-solid fa-clock me-1"></i>Horario
+                </button>
+            </li>
+            <li class="nav-item">
                 <button class="nav-link text-danger" :class="{ active: tab === 'peligro' }" @click="setTab('peligro')">
                     <i class="fa-solid fa-triangle-exclamation me-1"></i>Peligro
                 </button>
@@ -332,6 +337,87 @@
                                 wire:target="guardarWhatsapp">
                             <span wire:loading wire:target="guardarWhatsapp" class="spinner-border spinner-border-sm me-1"></span>
                             <i class="fa-solid fa-floppy-disk me-1"></i>Guardar
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        {{-- ═══════════════ TAB HORARIO ═══════════════ --}}
+        <div x-show="tab === 'horario'" x-cloak>
+            <div class="row justify-content-center">
+                <div class="col-xl-5 col-lg-7 col-md-9">
+
+                    <div class="alert alert-info d-flex gap-3 align-items-start mb-3 py-2" style="font-size:.82rem;">
+                        <i class="fa-solid fa-clock fa-lg mt-1 flex-shrink-0"></i>
+                        <div>
+                            Define el <strong>horario de atención</strong> de tu negocio. Las ventas realizadas dentro de ese rango se contabilizarán en el <strong>día comercial correspondiente</strong>.<br>
+                            <span class="text-muted">Ejemplo: inicio <strong>13:00</strong> — cierre <strong>02:00</strong> → las ventas del lunes 13:00 hasta el martes 02:00 se cuentan como ventas del <strong>lunes</strong>.</span>
+                        </div>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="card-header py-2">
+                            <h6 class="mb-0 fw-semibold">
+                                <i class="fa-solid fa-business-time me-1"></i>Horario de atención
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-sm-6">
+                                    <label class="form-label small mb-1 fw-semibold">
+                                        <i class="fa-solid fa-play me-1 text-success"></i>Hora de apertura
+                                    </label>
+                                    <input type="time"
+                                           class="form-control form-control-sm @error('horario_inicio') is-invalid @enderror"
+                                           wire:model="horario_inicio">
+                                    @error('horario_inicio')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <small class="text-muted">Hora en que comienza el día comercial</small>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="form-label small mb-1 fw-semibold">
+                                        <i class="fa-solid fa-stop me-1 text-danger"></i>Hora de cierre
+                                    </label>
+                                    <input type="time"
+                                           class="form-control form-control-sm @error('horario_fin') is-invalid @enderror"
+                                           wire:model="horario_fin">
+                                    @error('horario_fin')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <small class="text-muted">Puede ser del día siguiente (ej: 02:00)</small>
+                                </div>
+                            </div>
+
+                            @if($horario_inicio && $horario_fin)
+                                <div class="alert alert-success py-2 mt-3 mb-0 d-flex align-items-center gap-2" style="font-size:.82rem;">
+                                    <i class="fa-solid fa-circle-check text-success"></i>
+                                    <span>
+                                        @if($horario_inicio > $horario_fin)
+                                            El día comercial va de <strong>{{ $horario_inicio }}</strong> hasta <strong>{{ $horario_fin }}</strong> del día siguiente (cruza medianoche).
+                                        @else
+                                            El día comercial va de <strong>{{ $horario_inicio }}</strong> a <strong>{{ $horario_fin }}</strong> del mismo día.
+                                        @endif
+                                    </span>
+                                </div>
+                            @else
+                                <div class="alert alert-secondary py-2 mt-3 mb-0 d-flex align-items-center gap-2" style="font-size:.82rem;">
+                                    <i class="fa-solid fa-circle-info"></i>
+                                    <span>Sin horario configurado — se usa el día calendario (00:00–23:59).</span>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end">
+                        <button class="btn btn-primary btn-sm px-4"
+                                wire:click="guardarHorario"
+                                wire:loading.attr="disabled"
+                                wire:target="guardarHorario">
+                            <span wire:loading wire:target="guardarHorario" class="spinner-border spinner-border-sm me-1"></span>
+                            <i class="fa-solid fa-floppy-disk me-1"></i>Guardar horario
                         </button>
                     </div>
 

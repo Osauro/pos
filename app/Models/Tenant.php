@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class Tenant extends Model
@@ -28,6 +29,8 @@ class Tenant extends Model
         'printer_width',
         'printer_logo',
         'printer_show_nombre',
+        'horario_inicio',
+        'horario_fin',
     ];
 
     protected $casts = [
@@ -37,6 +40,84 @@ class Tenant extends Model
         'printer_logo'          => 'boolean',
         'printer_show_nombre'   => 'boolean',
     ];
+
+    // ── Helpers de día comercial ────────────────────────────────────────────
+
+    /**
+     * Indica si el horario de atención está configurado y cruza medianoche.
+     * Ej: inicio=13:00 fin=02:00 → cruza medianoche.
+     */
+    public function horarioCruzaMedianoche(): bool
+    {
+        if (!$this->horario_inicio || !$this->horario_fin) return false;
+        return $this->horario_inicio > $this->horario_fin;
+    }
+
+    /**
+     * Devuelve la fecha de negocio (día comercial) para un datetime dado.
+     * Ej: martes 01:30 con horario 13:00-02:00 → devuelve lunes.
+     */
+    public function businessDayFor(Carbon $dt): Carbon
+    {
+        if (!$this->horario_inicio || !$this->horario_fin) {
+            return $dt->copy()->startOfDay();
+        }
+
+        $hora = $dt->format('H:i:s');
+
+        if ($this->horarioCruzaMedianoche()) {
+            // Horas "pequeñas" (ej: 00:00-02:00) pertenecen al día anterior
+            if ($hora < $this->horario_fin) {
+                return $dt->copy()->subDay()->startOfDay();
+            }
+        }
+
+        return $dt->copy()->startOfDay();
+    }
+
+    /**
+     * Indica si el datetime dado (o ahora) está dentro del horario de atención.
+     * Sin horario configurado → siempre devuelve true.
+     */
+    public function estaEnHorario(?Carbon $dt = null): bool
+    {
+        if (!$this->horario_inicio || !$this->horario_fin) return true;
+
+        $dt   = $dt ?? Carbon::now();
+        $hora = $dt->format('H:i:s');
+
+        if ($this->horarioCruzaMedianoche()) {
+            // Dentro del horario: desde horario_inicio hasta medianoche
+            // O desde medianoche hasta horario_fin
+            return $hora >= $this->horario_inicio || $hora < $this->horario_fin;
+        }
+
+        return $hora >= $this->horario_inicio && $hora < $this->horario_fin;
+    }
+
+    /**
+     * Devuelve el rango [inicio, fin] de un día comercial dado.
+     * Ej: businessDayRange(Monday) con horario 13:00-02:00
+     *     → [Monday 13:00:00, Tuesday 02:00:00]
+     */
+    public function businessDayRange(Carbon $date): array
+    {
+        $d = $date->copy()->startOfDay();
+
+        if (!$this->horario_inicio || !$this->horario_fin) {
+            return [$d->copy()->startOfDay(), $d->copy()->endOfDay()];
+        }
+
+        $inicio = $d->copy()->setTimeFromTimeString($this->horario_inicio);
+
+        if ($this->horarioCruzaMedianoche()) {
+            $fin = $d->copy()->addDay()->setTimeFromTimeString($this->horario_fin);
+        } else {
+            $fin = $d->copy()->setTimeFromTimeString($this->horario_fin);
+        }
+
+        return [$inicio, $fin];
+    }
 
     public function themeColor(): string
     {
@@ -136,5 +217,13 @@ class Tenant extends Model
         }
 
         return true;
+    }
+
+    /**
+     * Devuelve el día comercial actual según el horario configurado.
+     */
+    public function businessDayHoy(): Carbon
+    {
+        return $this->businessDayFor(Carbon::now());
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Helpers\TenantHelper;
 use App\Models\Producto;
 use App\Models\Venta;
 use App\Models\VentaItem;
@@ -9,6 +10,7 @@ use App\Models\Movimiento;
 use App\Models\Turno;
 use App\Traits\WithSwal;
 use App\Traits\WithPermisos;
+use Carbon\Carbon;
 use Livewire\Component;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -82,13 +84,17 @@ class Pos extends Component
     // â”€â”€â”€ Crea (o recupera) la venta Pendiente del usuario actual â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     private function iniciarVentaPendiente(): void
     {
-        // Eliminar ventas pendientes antiguas si ya son más de las 07:00
-        if (now()->hour >= 7) {
-            Venta::where('user_id', Auth::id())
-                ->where('estado', 'Pendiente')
-                ->where('created_at', '<', now()->copy()->setTime(7, 0, 0))
-                ->delete();
-        }
+        // Eliminar ventas pendientes que pertenecen a un día comercial anterior
+        $tenant = TenantHelper::current();
+        $diaHoy = $tenant ? $tenant->businessDayFor(Carbon::now()) : Carbon::today();
+        [$inicioDiaComercial] = $tenant
+            ? $tenant->businessDayRange($diaHoy)
+            : [Carbon::today()->startOfDay(), Carbon::today()->endOfDay()];
+
+        Venta::where('user_id', Auth::id())
+            ->where('estado', 'Pendiente')
+            ->where('created_at', '<', $inicioDiaComercial)
+            ->delete();
 
         $turnoActivo = $this->getTurnoActivo();
 
@@ -221,6 +227,16 @@ class Pos extends Component
 
         // Verificar si existe movimiento hoy después de las 02:00
         if (!$this->verificarMovimientosHoy()) {
+            // Bloquear si está fuera del horario de atención
+            $tenant = TenantHelper::current();
+            if ($tenant && !$tenant->estaEnHorario()) {
+                $horaApertura = substr($tenant->horario_inicio, 0, 5);
+                $this->swalWarning(
+                    'Fuera de horario',
+                    "El día comercial aún no ha iniciado. El horario de apertura es a las <strong>{$horaApertura}</strong>."
+                );
+                return;
+            }
             $this->producto_pendiente_caja_id = $productoId;
             $this->monto_caja = '';
             $this->mostrar_modal_caja = true;
@@ -243,7 +259,7 @@ class Pos extends Component
         $this->addToCart($productoId, null);
     }
 
-    // ─── Verifica si ya hay movimientos hoy después de las 02:00 ─────────────
+    // ─── Verifica si ya hay movimientos en el día comercial actual ──────────
     private function verificarMovimientosHoy(): bool
     {
         $turnoActivo = $this->getTurnoActivo();
@@ -252,7 +268,9 @@ class Pos extends Component
             return true; // Sin turno activo, permitir flujo normal
         }
 
-        $desde = now()->copy()->setTime(2, 0, 0);
+        $tenant = TenantHelper::current();
+        $diaHoy = $tenant ? $tenant->businessDayFor(Carbon::now()) : Carbon::today();
+        [$desde] = $tenant ? $tenant->businessDayRange($diaHoy) : [Carbon::today(), Carbon::today()->endOfDay()];
 
         return Movimiento::where('turno_id', $turnoActivo->id)
             ->where('created_at', '>=', $desde)
@@ -777,7 +795,13 @@ class Pos extends Component
 
     private function getNumeroVenta(?Turno $turno): int
     {
-        $query = Venta::whereDate('fecha_hora', now()->toDateString())
+        $tenant = TenantHelper::current();
+        $diaHoy = $tenant ? $tenant->businessDayFor(Carbon::now()) : Carbon::today();
+        [$rangoInicio, $rangoFin] = $tenant
+            ? $tenant->businessDayRange($diaHoy)
+            : [Carbon::today()->startOfDay(), Carbon::today()->endOfDay()];
+
+        $query = Venta::whereBetween('fecha_hora', [$rangoInicio, $rangoFin])
             ->whereNotIn('estado', ['Pendiente']);
 
         if ($turno) {

@@ -2,10 +2,12 @@
 
 namespace App\Livewire;
 
+use App\Helpers\TenantHelper;
 use App\Models\Movimiento;
 use App\Models\Turno;
 use App\Traits\WithSwal;
 use App\Traits\WithPermisos;
+use Carbon\Carbon;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -92,8 +94,8 @@ class Movimientos extends Component
             if ($misTurnos->isNotEmpty()) {
                 // Si tiene fecha seleccionada, filtrar por día específico del turno
                 if ($this->fecha_seleccionada && $this->turno_seleccionado) {
-                    $query->where('turno_id', $this->turno_seleccionado)
-                          ->whereDate('created_at', $this->fecha_seleccionada);
+                    $query->where('turno_id', $this->turno_seleccionado);
+                    $this->filtrarMovimientoPorDiaComercial($query, $this->fecha_seleccionada);
                 } elseif ($this->turno_seleccionado) {
                     $query->where('turno_id', $this->turno_seleccionado);
                 } else {
@@ -206,8 +208,18 @@ class Movimientos extends Component
             return;
         }
 
-        // Primer movimiento del día (después de las 2:00) → flujo inicio de caja
+        // Primer movimiento del día → flujo inicio de caja
         if ($this->turno_id && $this->esPrimerMovimientoDelDia((int) $this->turno_id)) {
+            // Bloquear si está fuera del horario de atención
+            $tenant = TenantHelper::current();
+            if ($tenant && !$tenant->estaEnHorario()) {
+                $horaApertura = substr($tenant->horario_inicio, 0, 5);
+                $this->swalWarning(
+                    'Fuera de horario',
+                    "El día comercial aún no ha iniciado. El horario de apertura es a las <strong>{$horaApertura}</strong>."
+                );
+                return;
+            }
             $this->mostrarModalCambio = true;
             $this->dispatch('focusCambio');
             return;
@@ -220,10 +232,29 @@ class Movimientos extends Component
 
     private function esPrimerMovimientoDelDia(int $turnoId): bool
     {
-        $desde = now()->copy()->setTime(2, 0, 0);
+        $tenant = TenantHelper::current();
+        // Inicio del día comercial actual
+        $diaHoy = $tenant ? $tenant->businessDayFor(Carbon::now()) : Carbon::today();
+        [$desde] = $tenant ? $tenant->businessDayRange($diaHoy) : [Carbon::today(), Carbon::today()->endOfDay()];
+
         return !Movimiento::where('turno_id', $turnoId)
             ->where('created_at', '>=', $desde)
             ->exists();
+    }
+
+    /**
+     * Aplica filtro de día comercial sobre created_at del movimiento.
+     */
+    private function filtrarMovimientoPorDiaComercial($query, string $fecha): void
+    {
+        $tenant = TenantHelper::current();
+        if (!$tenant || !$tenant->horario_inicio || !$tenant->horario_fin) {
+            $query->whereDate('created_at', $fecha);
+            return;
+        }
+
+        [$inicio, $fin] = $tenant->businessDayRange(Carbon::parse($fecha));
+        $query->whereBetween('created_at', [$inicio, $fin]);
     }
 
     public function confirmarCambio(): void

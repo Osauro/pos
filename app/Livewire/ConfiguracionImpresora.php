@@ -48,6 +48,10 @@ class ConfiguracionImpresora extends Component
     public string $wa_api_token    = '';
     public bool   $wa_notify_ventas = false;
 
+    // Horario de atención
+    public string $horario_inicio = '';
+    public string $horario_fin   = '';
+
     public function mount(): void
     {
         if (!$this->esAdmin()) {
@@ -79,6 +83,10 @@ class ConfiguracionImpresora extends Component
         $this->wa_instance_id   = $pivot?->wa_instance_id  ?? '';
         $this->wa_api_token     = $pivot?->wa_api_token    ?? '';
         $this->wa_notify_ventas = (bool) ($pivot?->wa_notify_ventas ?? false);
+
+        // Horario de atención
+        $this->horario_inicio = $tenant->horario_inicio ? substr($tenant->horario_inicio, 0, 5) : '';
+        $this->horario_fin   = $tenant->horario_fin   ? substr($tenant->horario_fin,   0, 5) : '';
     }
 
     public function guardar(): void
@@ -219,12 +227,19 @@ class ConfiguracionImpresora extends Component
             return;
         }
 
-        DB::transaction(function () use ($tenantId, $turno, $hoy) {
-            // Solo ventas de HOY dentro del turno activo
+        // Rango del día comercial actual
+        $tenant = TenantHelper::current();
+        $diaHoy = $tenant ? $tenant->businessDayFor(Carbon::now()) : Carbon::today();
+        [$rangoInicio, $rangoFin] = $tenant
+            ? $tenant->businessDayRange($diaHoy)
+            : [Carbon::today()->startOfDay(), Carbon::today()->endOfDay()];
+
+        DB::transaction(function () use ($tenantId, $turno, $rangoInicio, $rangoFin) {
+            // Solo ventas del día comercial actual dentro del turno activo
             $ventaIds = DB::table('ventas')
                 ->where('tenant_id', $tenantId)
                 ->where('turno_id', $turno->id)
-                ->whereDate('fecha_hora', $hoy)
+                ->whereBetween('fecha_hora', [$rangoInicio, $rangoFin])
                 ->pluck('id');
 
             if ($ventaIds->isNotEmpty()) {
@@ -232,10 +247,10 @@ class ConfiguracionImpresora extends Component
                 DB::table('ventas')->whereIn('id', $ventaIds)->delete();
             }
 
-            // Movimientos de HOY dentro del turno activo
+            // Movimientos del día comercial actual dentro del turno activo
             DB::table('movimientos')
                 ->where('turno_id', $turno->id)
-                ->whereDate('created_at', $hoy)
+                ->whereBetween('created_at', [$rangoInicio, $rangoFin])
                 ->delete();
         });
 
@@ -315,4 +330,41 @@ class ConfiguracionImpresora extends Component
     {
         return view('livewire.configuracion-impresora');
     }
+
+    // ── Horario de atención ─────────────────────────────────────────────────
+
+    public function guardarHorario(): void
+    {
+        $this->validate([
+            'horario_inicio' => 'nullable|date_format:H:i',
+            'horario_fin'    => 'nullable|date_format:H:i',
+        ], [
+            'horario_inicio.date_format' => 'El formato de hora de inicio debe ser HH:MM.',
+            'horario_fin.date_format'    => 'El formato de hora de cierre debe ser HH:MM.',
+        ]);
+
+        $tenant = TenantHelper::current();
+        if (!$tenant) return;
+
+        $inicio = trim($this->horario_inicio) ?: null;
+        $fin    = trim($this->horario_fin)    ?: null;
+
+        // Si uno está vacío y el otro no, limpiar ambos
+        if (($inicio && !$fin) || (!$inicio && $fin)) {
+            $inicio = null;
+            $fin    = null;
+            $this->horario_inicio = '';
+            $this->horario_fin    = '';
+            $this->showErrorNotification('Debes configurar ambas horas (inicio y cierre) o dejar ambas vacías.');
+            return;
+        }
+
+        $tenant->update([
+            'horario_inicio' => $inicio,
+            'horario_fin'    => $fin,
+        ]);
+
+        $this->showSuccessNotification('Horario de atención guardado correctamente.');
+    }
 }
+

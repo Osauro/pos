@@ -2,6 +2,8 @@
 
 namespace App\Livewire;
 
+use App\Helpers\TenantHelper;
+use App\Models\Tenant;
 use App\Models\Venta;
 use App\Models\VentaItem;
 use App\Traits\WithPermisos;
@@ -35,19 +37,33 @@ class HomeTenant extends Component
     {
         $this->verificarAccesoDashboard();
 
-        $tenantId  = currentTenantId();
-        $hoy       = Carbon::today();
-        $inicioMes = Carbon::now()->startOfMonth();
+        $tenantId = currentTenantId();
+        $tenant   = TenantHelper::current();
 
-        // Tarjetas resumen
-        $this->ventasHoy  = Venta::where('tenant_id', $tenantId)->whereDate('created_at', $hoy)->count();
-        $this->ingresoHoy = (float) Venta::where('tenant_id', $tenantId)->whereDate('created_at', $hoy)->sum('total');
-        $this->ventasMes  = Venta::where('tenant_id', $tenantId)->where('created_at', '>=', $inicioMes)->count();
-        $this->ingresoMes = (float) Venta::where('tenant_id', $tenantId)->where('created_at', '>=', $inicioMes)->sum('total');
+        // Día comercial de hoy y su rango datetime
+        $diaHoy             = $this->businessDayHoy($tenant);
+        [$inicioHoy, $finHoy] = $this->rangeForDate($tenant, $diaHoy);
+
+        // Tarjetas resumen — usa fecha_hora con el rango del día comercial
+        $this->ventasHoy  = Venta::where('tenant_id', $tenantId)
+            ->whereBetween('fecha_hora', [$inicioHoy, $finHoy])
+            ->count();
+        $this->ingresoHoy = (float) Venta::where('tenant_id', $tenantId)
+            ->whereBetween('fecha_hora', [$inicioHoy, $finHoy])
+            ->sum('total');
+
+        // Mes actual: desde el inicio del día comercial del día 1 del mes hasta ahora
+        [$inicioMes] = $this->rangeForDate($tenant, Carbon::now()->startOfMonth());
+        $this->ventasMes  = Venta::where('tenant_id', $tenantId)
+            ->where('fecha_hora', '>=', $inicioMes)
+            ->count();
+        $this->ingresoMes = (float) Venta::where('tenant_id', $tenantId)
+            ->where('fecha_hora', '>=', $inicioMes)
+            ->sum('total');
 
         // Años disponibles para el filtro mensual
         $this->anosDisponibles = Venta::where('tenant_id', $tenantId)
-            ->selectRaw('YEAR(created_at) as anio')
+            ->selectRaw('YEAR(fecha_hora) as anio')
             ->groupBy('anio')
             ->orderByDesc('anio')
             ->pluck('anio')
@@ -82,9 +98,31 @@ class HomeTenant extends Component
         $this->dispatch('actualizarGraficoMensual', datos: $this->meses, anio: $this->anioMensual);
     }
 
+    // ── Helpers de día comercial ─────────────────────────────────────────────
+
+    private function businessDayHoy(?Tenant $tenant): Carbon
+    {
+        if (!$tenant) return Carbon::today();
+        return $tenant->businessDayFor(Carbon::now());
+    }
+
+    /**
+     * Devuelve [inicio, fin] Carbon del día comercial para la fecha dada.
+     */
+    private function rangeForDate(?Tenant $tenant, Carbon $date): array
+    {
+        if (!$tenant) {
+            return [$date->copy()->startOfDay(), $date->copy()->endOfDay()];
+        }
+        return $tenant->businessDayRange($date);
+    }
+
+    // ── Gráficos ─────────────────────────────────────────────────────────────
+
     private function calcularVentasSemanales(): array
     {
         $tenantId  = currentTenantId();
+        $tenant    = TenantHelper::current();
         $fechaBase = Carbon::parse($this->semanaFecha);
         $inicio    = $fechaBase->copy()->startOfWeek(Carbon::MONDAY);
 
@@ -92,10 +130,12 @@ class HomeTenant extends Component
         $ventas = [];
 
         for ($i = 0; $i < 7; $i++) {
-            $dia      = $inicio->copy()->addDays($i);
+            $dia = $inicio->copy()->addDays($i);
+            [$rangoInicio, $rangoFin] = $this->rangeForDate($tenant, $dia);
+
             $dias[]   = $dia->isoFormat('ddd D');
             $ventas[] = (float) Venta::where('tenant_id', $tenantId)
-                ->whereDate('created_at', $dia->toDateString())
+                ->whereBetween('fecha_hora', [$rangoInicio, $rangoFin])
                 ->sum('total');
         }
 
@@ -108,11 +148,14 @@ class HomeTenant extends Component
     private function calcularProductosVendidosHoy(): array
     {
         $tenantId = currentTenantId();
+        $tenant   = TenantHelper::current();
+        $diaHoy   = $this->businessDayHoy($tenant);
+        [$rangoInicio, $rangoFin] = $this->rangeForDate($tenant, $diaHoy);
 
         return VentaItem::join('ventas', 'venta_items.venta_id', '=', 'ventas.id')
             ->join('productos', 'venta_items.producto_id', '=', 'productos.id')
             ->where('ventas.tenant_id', $tenantId)
-            ->whereDate('ventas.created_at', Carbon::today())
+            ->whereBetween('ventas.fecha_hora', [$rangoInicio, $rangoFin])
             ->select(
                 'productos.nombre as nombre',
                 DB::raw('SUM(venta_items.cantidad) as cantidad'),
@@ -132,21 +175,25 @@ class HomeTenant extends Component
     private function calcularMeses(): array
     {
         $tenantId = currentTenantId();
+        $tenant   = TenantHelper::current();
         $nombres  = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-        $datos = Venta::where('tenant_id', $tenantId)
-            ->whereYear('created_at', $this->anioMensual)
-            ->selectRaw('MONTH(created_at) as mes, COUNT(*) as total, SUM(total) as ingreso')
-            ->groupBy('mes')
-            ->get()
-            ->keyBy('mes');
-
+        // Para cada mes: rango desde el inicio del día comercial del día 1
+        // hasta el fin del día comercial del último día del mes
         $meses  = [];
         $ventas = [];
 
         for ($m = 1; $m <= 12; $m++) {
+            $primerDia = Carbon::create($this->anioMensual, $m, 1);
+            $ultimoDia = $primerDia->copy()->endOfMonth();
+
+            [$inicioRango] = $this->rangeForDate($tenant, $primerDia);
+            [, $finRango]  = $this->rangeForDate($tenant, $ultimoDia);
+
             $meses[]  = $nombres[$m - 1];
-            $ventas[] = (float) ($datos[$m]->ingreso ?? 0);
+            $ventas[] = (float) Venta::where('tenant_id', $tenantId)
+                ->whereBetween('fecha_hora', [$inicioRango, $finRango])
+                ->sum('total');
         }
 
         return ['meses' => $meses, 'ventas' => $ventas];
@@ -157,3 +204,4 @@ class HomeTenant extends Component
         return view('livewire.home-tenant');
     }
 }
+

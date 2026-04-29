@@ -75,3 +75,38 @@ if (! function_exists('canManageTenant')) {
         return auth()->user()->canManageCurrentTenant();
     }
 }
+
+if (! function_exists('tenantBusinessDay')) {
+    /**
+     * Devuelve la fecha del día comercial para el datetime dado (o ahora si null).
+     * Usa el horario de atención del tenant activo.
+     */
+    function tenantBusinessDay(?\Carbon\Carbon $dt = null): \Carbon\Carbon
+    {
+        $dt     = $dt ?? \Carbon\Carbon::now();
+        $tenant = TenantHelper::current();
+
+        if (!$tenant) {
+            return $dt->copy()->startOfDay();
+        }
+
+        return $tenant->businessDayFor($dt);
+    }
+}
+
+if (! function_exists('tenantBusinessDayRange')) {
+    /**
+     * Devuelve [inicio, fin] del día comercial para la fecha dada.
+     * Usa el horario de atención del tenant activo.
+     */
+    function tenantBusinessDayRange(\Carbon\Carbon $date): array
+    {
+        $tenant = TenantHelper::current();
+
+        if (!$tenant) {
+            return [$date->copy()->startOfDay(), $date->copy()->endOfDay()];
+        }
+
+        return $tenant->businessDayRange($date);
+    }
+}

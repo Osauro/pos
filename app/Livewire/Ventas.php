@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\Venta;
 use App\Models\User;
 use App\Models\Turno;
+use App\Helpers\TenantHelper;
 use App\Traits\WithSwal;
 use App\Traits\WithPermisos;
 use Livewire\Attributes\On;
@@ -135,7 +136,7 @@ class Ventas extends Component
                 if ($turno) {
                     $query->where('turno_id', $turno->id);
                     if ($this->fecha_seleccionada) {
-                        $query->whereDate('fecha_hora', $this->fecha_seleccionada);
+                        $this->filtrarPorDiaComercial($query, $this->fecha_seleccionada);
                     }
                 } else {
                     // Turno no válido, no mostrar nada
@@ -162,7 +163,7 @@ class Ventas extends Component
                 if ($turno) {
                     $query->where('turno_id', $turno->id);
                     if ($this->fecha_seleccionada) {
-                        $query->whereDate('fecha_hora', $this->fecha_seleccionada);
+                        $this->filtrarPorDiaComercial($query, $this->fecha_seleccionada);
                     }
                 }
             }
@@ -433,4 +434,22 @@ class Ventas extends Component
         $this->ventaSeleccionada = null;
         $this->showSuccessNotification('Venta #' . $venta->numero_venta . ' anulada');
     }
+
+    /**
+     * Aplica un filtro de fecha usando el rango del día comercial del tenant.
+     * Si hay horario configurado (ej: 13:00–02:00), filtra por el rango datetime
+     * en lugar de hacer un simple whereDate.
+     */
+    private function filtrarPorDiaComercial($query, string $fecha): void
+    {
+        $tenant = TenantHelper::current();
+        if (!$tenant || !$tenant->horario_inicio || !$tenant->horario_fin) {
+            $query->whereDate('fecha_hora', $fecha);
+            return;
+        }
+
+        [$inicio, $fin] = $tenant->businessDayRange(\Carbon\Carbon::parse($fecha));
+        $query->whereBetween('fecha_hora', [$inicio, $fin]);
+    }
 }
+
