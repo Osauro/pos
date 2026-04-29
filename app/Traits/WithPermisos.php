@@ -13,6 +13,12 @@ trait WithPermisos
         return isLandlord();
     }
 
+    // Propietario del tenant (registro más antiguo en tenant_user)
+    public function esPropietario(): bool
+    {
+        return isTenantOwner();
+    }
+
     // Admin del negocio (landlord también cuenta como admin)
     public function esAdmin(): bool
     {

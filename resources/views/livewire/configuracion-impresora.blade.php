@@ -25,21 +25,25 @@
                     <i class="fa-solid fa-qrcode me-1"></i>Pago QR
                 </button>
             </li>
+            @if($esPropietario)
             <li class="nav-item">
                 <button class="nav-link" :class="{ active: tab === 'whatsapp' }" @click="setTab('whatsapp')">
                     <i class="fa-brands fa-whatsapp me-1"></i>WhatsApp
                 </button>
             </li>
+            @endif
             <li class="nav-item">
                 <button class="nav-link" :class="{ active: tab === 'horario' }" @click="setTab('horario')">
                     <i class="fa-solid fa-clock me-1"></i>Horario
                 </button>
             </li>
+            @if($esPropietario)
             <li class="nav-item">
                 <button class="nav-link text-danger" :class="{ active: tab === 'peligro' }" @click="setTab('peligro')">
                     <i class="fa-solid fa-triangle-exclamation me-1"></i>Peligro
                 </button>
             </li>
+            @endif
         </ul>
 
         {{-- ═══════════════ TAB IMPRESORA ═══════════════ --}}
@@ -266,6 +270,7 @@
         </div>
 
         {{-- ═══════════════ TAB WHATSAPP ═══════════════ --}}
+        @if($esPropietario)
         <div x-show="tab === 'whatsapp'" x-cloak>
             <div class="row justify-content-center">
                 <div class="col-xl-5 col-lg-7 col-md-9">
@@ -343,6 +348,7 @@
                 </div>
             </div>
         </div>
+        @endif
 
         {{-- ═══════════════ TAB HORARIO ═══════════════ --}}
         <div x-show="tab === 'horario'" x-cloak>
@@ -426,6 +432,7 @@
         </div>
 
         {{-- ═══════════════ TAB PELIGRO ═══════════════ --}}
+        @if($esPropietario)
         <div x-show="tab === 'peligro'" x-cloak>
             <div class="row justify-content-center">
                 <div class="col-xl-5 col-lg-7 col-md-9">
@@ -483,6 +490,7 @@
                 </div>
             </div>
         </div>
+        @endif
 
     </div>{{-- /x-data --}}
 
@@ -495,7 +503,9 @@
             tab: 'impresora',
             init() {
                 const saved = localStorage.getItem('cfg_tab');
-                if (['impresora', 'qr', 'whatsapp', 'peligro'].includes(saved)) this.tab = saved;
+                const ownerOnly = @json($esPropietario) ? ['whatsapp', 'peligro'] : [];
+                const valid = ['impresora', 'qr', 'horario', ...ownerOnly];
+                if (valid.includes(saved)) this.tab = saved;
             },
             setTab(name) {
                 this.tab = name;

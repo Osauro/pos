@@ -43,10 +43,13 @@ class ConfiguracionImpresora extends Component
     public $qr_imagen_file = null;
     public ?string $qr_imagen_actual = null;
 
-    // WhatsApp — Green API
+    // WhatsApp — Green API (credenciales del tenant)
     public string $wa_instance_id  = '';
     public string $wa_api_token    = '';
     public bool   $wa_notify_ventas = false;
+
+    // Control de acceso
+    public bool $esPropietario = false;
 
     // Horario de atención
     public string $horario_inicio = '';
@@ -60,6 +63,9 @@ class ConfiguracionImpresora extends Component
 
         $tenant = TenantHelper::current();
         if (!$tenant) abort(404);
+
+        // Propietario del tenant
+        $this->esPropietario = isTenantOwner();
 
         $this->printer_modo          = 'agent';
 
@@ -79,10 +85,10 @@ class ConfiguracionImpresora extends Component
             ->first()?->pivot;
         $this->qr_imagen_actual = $pivot?->qr_imagen ?? null;
 
-        // WhatsApp
-        $this->wa_instance_id   = $pivot?->wa_instance_id  ?? '';
-        $this->wa_api_token     = $pivot?->wa_api_token    ?? '';
-        $this->wa_notify_ventas = (bool) ($pivot?->wa_notify_ventas ?? false);
+        // WhatsApp — credenciales del tenant
+        $this->wa_instance_id   = $tenant->wa_instance_id  ?? '';
+        $this->wa_api_token     = $tenant->wa_api_token    ?? '';
+        $this->wa_notify_ventas = (bool) ($tenant->wa_notify_ventas ?? false);
 
         // Horario de atención
         $this->horario_inicio = $tenant->horario_inicio ? substr($tenant->horario_inicio, 0, 5) : '';
@@ -179,7 +185,7 @@ class ConfiguracionImpresora extends Component
      */
     public function resetTenant(): void
     {
-        if (!$this->esAdmin()) {
+        if (! $this->esPropietario) {
             abort(403);
         }
 
@@ -206,7 +212,7 @@ class ConfiguracionImpresora extends Component
 
     public function resetDia(): void
     {
-        if (!$this->esAdmin()) {
+        if (! $this->esPropietario) {
             abort(403);
         }
 
@@ -259,16 +265,20 @@ class ConfiguracionImpresora extends Component
 
     public function guardarWhatsapp(): void
     {
+        if (! $this->esPropietario) {
+            abort(403);
+        }
+
         $this->validate([
             'wa_instance_id'   => 'nullable|string|max:100',
             'wa_api_token'     => 'nullable|string|max:100',
             'wa_notify_ventas' => 'boolean',
         ]);
 
-        $tenantId = TenantHelper::currentId();
-        if (!$tenantId) return;
+        $tenant = TenantHelper::current();
+        if (!$tenant) return;
 
-        User::find(Auth::id())->tenants()->updateExistingPivot($tenantId, [
+        $tenant->update([
             'wa_instance_id'   => trim($this->wa_instance_id)  ?: null,
             'wa_api_token'     => trim($this->wa_api_token)    ?: null,
             'wa_notify_ventas' => $this->wa_notify_ventas,
@@ -279,6 +289,10 @@ class ConfiguracionImpresora extends Component
 
     public function probarWhatsapp(): void
     {
+        if (! $this->esPropietario) {
+            abort(403);
+        }
+
         if (empty($this->wa_instance_id) || empty($this->wa_api_token)) {
             $this->showErrorNotification('Completa los campos de instancia y token antes de probar.');
             return;

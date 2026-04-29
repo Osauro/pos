@@ -76,6 +76,26 @@ if (! function_exists('canManageTenant')) {
     }
 }
 
+if (! function_exists('isTenantOwner')) {
+    /**
+     * Indica si el usuario autenticado es el propietario del tenant actual.
+     * Se identifica por el registro más antiguo (menor id) en tenant_user.
+     */
+    function isTenantOwner(): bool
+    {
+        if (! auth()->check()) {
+            return false;
+        }
+
+        $tenant = TenantHelper::current();
+        if (! $tenant) {
+            return false;
+        }
+
+        return $tenant->propietarioId() === auth()->id();
+    }
+}
+
 if (! function_exists('tenantBusinessDay')) {
     /**
      * Devuelve la fecha del día comercial para el datetime dado (o ahora si null).

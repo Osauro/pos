@@ -190,16 +190,19 @@ class Pos extends Component
         $waEnabled = false;
         $turnoActivo = $this->getTurnoActivo();
         if ($turnoActivo?->encargado_id) {
-            // Siempre se usan las credenciales del encargado/admin del turno,
-            // independientemente de qué usuario esté operando el POS.
+            // QR: sigue siendo del encargado del turno
             $encargado = \App\Models\User::find($turnoActivo->encargado_id);
             $pivot = $encargado?->tenants()
                 ->wherePivot('tenant_id', \App\Helpers\TenantHelper::currentId())
                 ->first()?->pivot;
-            $qrImagen  = $pivot?->qr_imagen;
-            $waEnabled = !empty($pivot?->wa_instance_id)
-                      && !empty($pivot?->wa_api_token)
-                      && !empty($encargado?->celular);
+            $qrImagen = $pivot?->qr_imagen;
+        }
+
+        // WhatsApp: credenciales del tenant, notifica al propietario
+        $tenant = \App\Helpers\TenantHelper::current();
+        if ($tenant && !empty($tenant->wa_instance_id) && !empty($tenant->wa_api_token)) {
+            $ownerUser = \App\Models\User::find($tenant->propietarioId());
+            $waEnabled = !empty($ownerUser?->celular);
         }
 
         return view('livewire.pos', compact('productos', 'qrImagen', 'waEnabled'));
@@ -768,18 +771,16 @@ class Pos extends Component
      * Siempre usa encargado_id del turno, nunca Auth::id(),
      * para que operadores también envíen al admin correspondiente.
      *
-     * @return array{0: \App\Models\User|null, 1: mixed}
+     * Devuelve [propietario, tenant] para las notificaciones WhatsApp.
+     * Las credenciales son del tenant y el número de destino es del propietario.
      */
     private function getEncargadoWA(?Turno $turno): array
     {
-        if (!$turno?->encargado_id) return [null, null];
+        $tenant = \App\Helpers\TenantHelper::current();
+        if (!$tenant) return [null, null];
 
-        $encargado = \App\Models\User::find($turno->encargado_id);
-        $pivot = $encargado?->tenants()
-            ->wherePivot('tenant_id', \App\Helpers\TenantHelper::currentId())
-            ->first()?->pivot;
-
-        return [$encargado, $pivot];
+        $ownerUser = \App\Models\User::find($tenant->propietarioId());
+        return [$ownerUser, $tenant];
     }
 
     private function getTurnoActivo(): ?Turno

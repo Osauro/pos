@@ -31,6 +31,9 @@ class Tenant extends Model
         'printer_show_nombre',
         'horario_inicio',
         'horario_fin',
+        'wa_instance_id',
+        'wa_api_token',
+        'wa_notify_ventas',
     ];
 
     protected $casts = [
@@ -39,6 +42,7 @@ class Tenant extends Model
         'printer_auto_comanda'  => 'boolean',
         'printer_logo'          => 'boolean',
         'printer_show_nombre'   => 'boolean',
+        'wa_notify_ventas'      => 'boolean',
     ];
 
     // ── Helpers de día comercial ────────────────────────────────────────────
@@ -47,6 +51,17 @@ class Tenant extends Model
      * Indica si el horario de atención está configurado y cruza medianoche.
      * Ej: inicio=13:00 fin=02:00 → cruza medianoche.
      */
+    /**
+     * Devuelve el user_id del propietario del tenant (el registro más antiguo en tenant_user).
+     */
+    public function propietarioId(): ?int
+    {
+        return \Illuminate\Support\Facades\DB::table('tenant_user')
+            ->where('tenant_id', $this->id)
+            ->orderBy('id')
+            ->value('user_id');
+    }
+
     public function horarioCruzaMedianoche(): bool
     {
         if (!$this->horario_inicio || !$this->horario_fin) return false;
