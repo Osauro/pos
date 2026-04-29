@@ -233,7 +233,7 @@ class Pos extends Component
                 $horaApertura = substr($tenant->horario_inicio, 0, 5);
                 $this->swalWarning(
                     'Fuera de horario',
-                    "El día comercial aún no ha iniciado. El horario de apertura es a las <strong>{$horaApertura}</strong>."
+                    "El día comercial aún no ha iniciado. El horario de apertura es a las {$horaApertura}."
                 );
                 return;
             }
