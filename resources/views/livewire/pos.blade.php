@@ -86,7 +86,7 @@
                                 ->sum('cantidad');
                             $enCarrito = $cantidadEnCarrito > 0;
                         @endphp
-                        <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+                        <div class="col-6 col-md-4 col-lg-3 col-xl-3">
                             <div class="card prod-card h-100 {{ $enCarrito ? 'prod-card--active' : '' }}"
                                  wire:click="agregarAlCarrito({{ $producto->id }})"
                                  wire:loading.class="opacity-50"
