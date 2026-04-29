@@ -17,19 +17,19 @@
             <div class="btn-group flex-shrink-0" role="group">
                 <button wire:click="toggleAutoComanda"
                         title="{{ $auto_comanda ? 'Comanda ON' : 'Comanda OFF' }}"
-                        class="btn btn-sm {{ $auto_comanda ? 'btn-success' : 'btn-outline-secondary' }}">
+                        class="btn btn-sm pos-action-btn {{ $auto_comanda ? 'btn-success' : 'btn-outline-secondary' }}">
                     <i class="fa-solid fa-kitchen-set"></i>
                     <span class="d-none d-lg-inline ms-1">Comanda</span>
                 </button>
                 <button wire:click="toggleAutoTicket"
                         title="{{ $auto_ticket ? 'Ticket ON' : 'Ticket OFF' }}"
-                        class="btn btn-sm {{ $auto_ticket ? 'btn-success' : 'btn-outline-secondary' }}">
+                        class="btn btn-sm pos-action-btn {{ $auto_ticket ? 'btn-success' : 'btn-outline-secondary' }}">
                     <i class="fa-solid fa-receipt"></i>
                     <span class="d-none d-lg-inline ms-1">Ticket</span>
                 </button>
                 <button type="button"
                         wire:click="setOrdenProductos('{{ $orden_productos === 'popularidad' ? 'nombre' : 'popularidad' }}')"
-                        class="btn btn-sm {{ $orden_productos === 'popularidad' ? 'btn-warning' : 'btn-secondary' }}"
+                        class="btn btn-sm pos-action-btn {{ $orden_productos === 'popularidad' ? 'btn-warning' : 'btn-secondary' }}"
                         title="{{ $orden_productos === 'popularidad' ? 'Ordenar por nombre' : 'Ordenar por popularidad' }}">
                     @if($orden_productos === 'popularidad')
                         <i class="fa-solid fa-fire"></i>
@@ -41,7 +41,7 @@
                 </button>
                 <button type="button"
                         wire:click="toggleHayFideo"
-                        class="btn btn-sm {{ $hay_fideo ? 'btn-success' : 'btn-outline-danger' }}"
+                        class="btn btn-sm pos-action-btn {{ $hay_fideo ? 'btn-success' : 'btn-outline-danger' }}"
                         title="{{ $hay_fideo ? 'Hay fideo — clic para indicar que no hay' : 'Sin fideo — clic para activar fideo' }}">
                     🍝
                     <span class="d-none d-lg-inline ms-1">{{ $hay_fideo ? 'Fideo' : 'Sin fideo' }}</span>
@@ -52,6 +52,7 @@
 
     <style>
         .bottom-nav        { display: none !important; }
+        .pos-action-btn    { min-width: 2.8rem; }
         .page-body         { padding: 0 !important; overflow: hidden !important; }
         .page-body-wrapper { overflow: hidden !important; }
         html, body         { overflow: hidden !important; height: 100% !important; }
