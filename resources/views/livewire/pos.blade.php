@@ -1035,6 +1035,11 @@
         };
     }
 
+    // Listener del evento Livewire registrado aquí para garantizar el orden de carga
+    $wire.on('play-sound', ([name]) => {
+        window.playSound(name);
+    });
+
     window.cobroOverlay = function (qrUrl, waEnabled) {
         return {
             qrUrl,
