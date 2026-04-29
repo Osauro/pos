@@ -417,6 +417,7 @@ class Pos extends Component
 
         $this->calcularTotal();
         $this->actualizarTotalVenta();
+        $this->dispatch('play-sound', 'agregar');
     }
 
     public function aumentarCantidad($key): void
@@ -496,6 +497,7 @@ class Pos extends Component
         unset($this->carrito[$key]);
         $this->calcularTotal();
         $this->actualizarTotalVenta();
+        $this->dispatch('play-sound', 'eliminar');
     }
 
     public function vaciarCarrito(): void
@@ -706,6 +708,7 @@ class Pos extends Component
             DB::commit();
 
             $this->showSuccessNotification('Pedido cancelado');
+            $this->dispatch('play-sound', 'eliminar');
 
             $this->venta_id = null;
             $this->carrito = [];

@@ -1032,6 +1032,7 @@
             acumulado: 0,
             cambio: 0,
             onlinePagado: 0,
+            ventaCompletada: false,
             // Cámara / comprobante
             cameraStream: null,
             fotoBase64: null,
@@ -1046,17 +1047,22 @@
                 this.onlinePagado = 0;
                 this.fotoBase64   = null;
                 this.cameraError  = null;
-                this.enviando     = false;
-                this.procesando   = false;
-                this.currentFacing = 'user';
-                this.fase         = 'cobrando';
-                this.abierto      = true;
+                this.enviando         = false;
+                this.procesando       = false;
+                this.ventaCompletada  = false;
+                this.currentFacing    = 'user';
+                this.fase             = 'cobrando';
+                this.abierto          = true;
             },
 
             cerrar() {
                 this.stopCamera();
                 this.fotoBase64 = null;
-                this.abierto    = false;
+                if (this.ventaCompletada) {
+                    window.playSound('pagar');
+                    this.ventaCompletada = false;
+                }
+                this.abierto = false;
             },
 
             pendiente() {
@@ -1070,7 +1076,8 @@
                     this.onlinePagado = 0;
                     this.procesando = true;
                     try { await $wire.procesarVenta(this.total, 0); } catch(e) {}
-                    this.procesando = false;
+                    this.procesando      = false;
+                    this.ventaCompletada = true;
                     if (this.cambio > 0) {
                         this.fase = 'cambio';
                     } else {
@@ -1085,7 +1092,8 @@
                 this.onlinePagado = 0;
                 this.procesando   = true;
                 try { await $wire.procesarVenta(this.acumulado + resto, 0); } catch(e) {}
-                this.procesando = false;
+                this.procesando      = false;
+                this.ventaCompletada = true;
                 this.cerrar();
             },
 
@@ -1095,7 +1103,8 @@
                 this.cambio       = 0;
                 this.procesando   = true;
                 try { await $wire.procesarVenta(this.acumulado, resto); } catch(e) {}
-                this.procesando = false;
+                this.procesando      = false;
+                this.ventaCompletada = true;
 
                 if (this.waEnabled) {
                     this.fase = 'comprobante';

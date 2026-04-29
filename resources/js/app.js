@@ -57,11 +57,36 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// ── Sistema de sonidos ───────────────────────────────────────────────────────
+const _soundCache = {};
+window.playSound = function (name) {
+    try {
+        if (!_soundCache[name]) {
+            _soundCache[name] = new Audio(`/storage/sounds/${name}.mp3`);
+        }
+        const audio = _soundCache[name];
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+    } catch (e) {}
+};
+
 // SweetAlert2 Livewire Integration
 document.addEventListener('livewire:init', () => {
     // Escuchar evento swal
     Livewire.on('swal', (data) => {
-        Swal.fire(data[0]);
+        const config = data[0];
+        const icon = config.icon || '';
+        if (icon === 'error' || icon === 'warning') {
+            window.playSound('error');
+        } else if (icon === 'success' || icon === 'info') {
+            window.playSound('noti');
+        }
+        Swal.fire(config);
+    });
+
+    // Escuchar evento play-sound
+    Livewire.on('play-sound', (data) => {
+        window.playSound(Array.isArray(data) ? data[0] : data);
     });
 
     // Escuchar evento swal:confirm
