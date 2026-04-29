@@ -281,6 +281,7 @@ class Movimientos extends Component
             if ($saldoActual > 0) {
                 Movimiento::create([
                     'turno_id' => $this->turno_id,
+                    'user_id'  => auth()->id(),
                     'detalle'  => 'Retiro de saldo al iniciar caja',
                     'ingreso'  => 0,
                     'egreso'   => $saldoActual,
@@ -291,6 +292,7 @@ class Movimientos extends Component
             // Ingresar el cambio inicial
             Movimiento::create([
                 'turno_id' => $this->turno_id,
+                'user_id'  => auth()->id(),
                 'detalle'  => 'Inicio de caja',
                 'ingreso'  => (float) $this->montoCambio,
                 'egreso'   => 0,

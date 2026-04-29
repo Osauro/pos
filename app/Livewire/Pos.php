@@ -304,6 +304,7 @@ class Pos extends Component
             if ($saldoActual > 0) {
                 Movimiento::create([
                     'turno_id' => $turnoActivo->id,
+                    'user_id'  => Auth::id(),
                     'detalle'  => 'Retiro de saldo al iniciar caja',
                     'ingreso'  => 0,
                     'egreso'   => $saldoActual,
@@ -314,6 +315,7 @@ class Pos extends Component
             // 2. Ingresar el monto como cambio inicial de caja
             Movimiento::create([
                 'turno_id' => $turnoActivo->id,
+                'user_id'  => Auth::id(),
                 'detalle'  => 'Inicio de caja',
                 'ingreso'  => (float) $this->monto_caja,
                 'egreso'   => 0,
@@ -570,6 +572,7 @@ class Pos extends Component
                 $saldo = Movimiento::where('turno_id', $turnoActivo->id)->orderBy('id', 'desc')->value('saldo') ?? 0;
                 Movimiento::create([
                     'turno_id' => $turnoActivo->id,
+                    'user_id'  => Auth::id(),
                     'detalle'  => 'Venta #' . $venta->numero_venta,
                     'ingreso'  => $this->total,
                     'egreso'   => 0,

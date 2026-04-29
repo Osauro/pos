@@ -420,6 +420,7 @@ class Ventas extends Component
                 ->value('saldo') ?? 0;
             \App\Models\Movimiento::create([
                 'turno_id' => $venta->turno_id,
+                'user_id'  => auth()->id(),
                 'detalle'  => 'Anulación Venta #' . $venta->numero_venta,
                 'ingreso'  => 0,
                 'egreso'   => $venta->total,
