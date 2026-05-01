@@ -904,29 +904,41 @@ class Pos extends Component
         // Mantener carrito visible y pasar al estado "Por Cobrar" para cobrar
         $this->es_venta_por_cobrar = true;
 
-        // Imprimir comanda solo si está habilitada
+        // Imprimir comanda ANTES de marcar los ítems (buildComandaJob filtra !comanda_impresa)
         if ($this->auto_comanda) {
             try {
                 $ventaParaImprimir = \App\Models\Venta::with(['items.producto', 'turno.encargado', 'usuario'])
                     ->find($ventaId);
-                $svc = app(\App\Services\EscposPrintService::class);
+                $svc   = app(\App\Services\EscposPrintService::class);
                 $built = $svc->buildComandaJob($ventaParaImprimir);
                 if ($built['ok']) {
                     $this->dispatch('print-agent',
                         payload: array_merge(['printer' => $built['printer']], $built['job']),
                         ventaId: $ventaId
                     );
-                    VentaItem::where('venta_id', $ventaId)
-                        ->where('comanda_impresa', false)
-                        ->update(['comanda_impresa' => true]);
+                    $this->swalSuccess('Comanda enviada', 'La venta quedó en estado Por Cobrar.');
+                } else {
+                    $this->swalSuccess('Por Cobrar', 'La venta quedó en estado Por Cobrar.');
                 }
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::error('Error impresión comanda PorCobrar: ' . $e->getMessage());
+                $this->swalSuccess('Por Cobrar', 'La venta quedó en estado Por Cobrar.');
             }
-            $this->swalSuccess('Comanda enviada', 'La venta quedó en estado Por Cobrar.');
         } else {
             $this->swalSuccess('Por Cobrar', 'La venta quedó en estado Por Cobrar.');
         }
+
+        // Marcar TODOS los ítems nuevos como impresos (para bloquearlos en UI)
+        VentaItem::where('venta_id', $ventaId)
+            ->where('comanda_impresa', false)
+            ->update(['comanda_impresa' => true]);
+
+        // Refrescar carrito en memoria para que el botón Comanda desaparezca
+        foreach (array_keys($this->carrito) as $k) {
+            $this->carrito[$k]['comanda_impresa'] = true;
+        }
+
+        $this->dispatch('comanda-enviada');
     }
 
     /**

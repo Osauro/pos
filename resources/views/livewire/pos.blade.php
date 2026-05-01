@@ -274,11 +274,26 @@
                         <i class="fa-solid fa-kitchen-set me-2"></i>Comanda Bs. {{ number_format($total, 2) }}
                     </button>
                     @else
+                    @php
+                        $hayNuevosEsc = collect($carrito)->contains(
+                            fn($i) => !($i['comanda_impresa'] ?? false)
+                                   && in_array($i['categoria'] ?? '', ['Platos', 'Porciones'])
+                        );
+                    @endphp
                     <button wire:click="descartarEdicionPorCobrar"
                             class="btn btn-outline-secondary btn-lg px-3"
                             title="Nueva venta">
                         <i class="fa-solid fa-plus"></i>
                     </button>
+                    @if($hayNuevosEsc)
+                    <button wire:click="marcarPorCobrar"
+                            wire:loading.attr="disabled"
+                            wire:target="marcarPorCobrar"
+                            class="btn btn-warning btn-lg fw-bold flex-fill"
+                            title="Enviar nuevos items a comanda">
+                        <i class="fa-solid fa-kitchen-set me-2"></i>Comanda Bs. {{ number_format($total, 2) }}
+                    </button>
+                    @else
                     <button @click="$dispatch('abrir-cobro', { total: {{ $total }} })"
                             wire:loading.attr="disabled"
                             wire:target="procesarVenta"
@@ -287,6 +302,7 @@
                         <i class="fa-solid fa-check me-2"></i>Pagar Bs. {{ number_format($total, 2) }}
                     </button>
                     @endif
+                    @endif
                 </div>
             </div>
         </div>
@@ -294,7 +310,43 @@
     </div>{{-- /row g-0 pos-layout --}}
 
     {{-- ══ BOTTOM BAR (solo móvil) ══ --}}
-    <div class="pos-bottom-bar d-lg-none">
+    @php
+        $hayNuevosMovil = collect($carrito)->contains(
+            fn($i) => !($i['comanda_impresa'] ?? false)
+                   && in_array($i['categoria'] ?? '', ['Platos', 'Porciones'])
+        );
+    @endphp
+    <div class="pos-bottom-bar d-lg-none"
+         x-data="{
+             secs: 0,
+             _t: null,
+             start() {
+                 this.clear();
+                 this.secs = 10;
+                 this._t = setInterval(() => {
+                     this.secs--;
+                     if (this.secs <= 0) {
+                         this.clear();
+                         $wire.descartarEdicionPorCobrar();
+                     }
+                 }, 1000);
+             },
+             clear() {
+                 if (this._t) { clearInterval(this._t); this._t = null; }
+                 this.secs = 0;
+             },
+             init() {
+                 $wire.on('comanda-enviada', () => this.start());
+             }
+         }">
+
+        {{-- Pill contador --}}
+        <div class="comanda-timer-pill"
+             x-show="secs > 0"
+             x-transition
+             x-text="'Nueva venta en ' + secs + 's'">
+        </div>
+
         @if(!$es_venta_por_cobrar)
         <button wire:click="cancelarVenta"
                 class="pos-act pos-act--danger"
@@ -307,22 +359,32 @@
                 class="pos-act pos-act--comanda"
                 style="flex:2"
                 {{ empty($carrito) ? 'disabled' : '' }}>
-            <i class="fa-solid fa-kitchen-set"></i>
-            <span>Bs. {{ number_format($total, 2) }}</span>
+            <span class="pos-act__monto">Bs. {{ number_format($total, 2) }}</span>
         </button>
         @else
         <button wire:click="descartarEdicionPorCobrar"
+                @click="clear()"
                 class="pos-act">
             <i class="fa-solid fa-plus"></i>
         </button>
-        <button @click="$dispatch('abrir-cobro', { total: {{ $total }} })"
+        @if($hayNuevosMovil)
+        <button wire:click="marcarPorCobrar"
+                wire:loading.attr="disabled"
+                wire:target="marcarPorCobrar"
+                class="pos-act pos-act--comanda"
+                style="flex:2">
+            <span class="pos-act__monto">Bs. {{ number_format($total, 2) }}</span>
+        </button>
+        @else
+        <button @click="clear(); $dispatch('abrir-cobro', { total: {{ $total }} })"
                 wire:loading.attr="disabled"
                 wire:target="procesarVenta"
                 class="pos-act pos-act--pay"
+                style="flex:2"
                 {{ empty($carrito) ? 'disabled' : '' }}>
-            <i class="fa-solid fa-check"></i>
-            <span>Bs. {{ number_format($total, 2) }}</span>
+            <span class="pos-act__monto">Bs. {{ number_format($total, 2) }}</span>
         </button>
+        @endif
         @endif
         <button wire:click="toggleCarrito" class="pos-act pos-act--cart">
             <i class="fa-solid fa-{{ $mostrar_carrito ? 'utensils' : 'cart-shopping' }}"></i>
@@ -456,27 +518,25 @@
                                     <span class="badge bg-success" style="font-size:.7rem"><i class="fa-solid fa-bowl-food me-1"></i>{{ $porcionesVpc }}</span>
                                 @endif
                             </div>
-                            <span class="ms-auto fw-bold text-success" style="font-size:.95rem">Bs. {{ number_format($vpc->total, 2) }}</span>
                         </div>
 
-                        {{-- Grid de imágenes --}}
-                        <div class="pcc-items-row">
+                        {{-- Título DETALLE --}}
+                        <div class="pcc-detalle-title">D E T A L L E</div>
+
+                        {{-- Lista de items estilo ticket --}}
+                        <div class="pcc-ticket-list">
                             @foreach($vpc->ventaItems as $itm)
-                                <div class="pcc-item-card">
-                                    @if($itm->producto?->imagen)
-                                        <img src="{{ asset('storage/' . $itm->producto->imagen) }}"
-                                             class="pcc-item-card__img"
-                                             alt="{{ $itm->producto->nombre }}">
-                                    @else
-                                        <div class="pcc-item-card__ph">
-                                            @php $tIcon = match($itm->producto?->tipo) { 'Refrescos' => 'fa-glass-water', 'Porciones' => 'fa-bowl-food', default => 'fa-utensils' }; @endphp
-                                            <i class="fa-solid {{ $tIcon }} fa-2x opacity-40"></i>
-                                        </div>
-                                    @endif
-                                    <span class="pcc-item-card__qty">{{ $itm->cantidad }}×</span>
-                                    <div class="pcc-item-card__name">{{ $itm->producto?->nombre ?? '—' }}</div>
+                                <div class="pcc-ticket-row">
+                                    <span class="pcc-ticket-cant">{{ $itm->cantidad }}</span>
+                                    <span class="pcc-ticket-nombre">{{ $itm->producto?->nombre ?? '—' }}</span>
+                                    <span class="pcc-ticket-precio">{{ number_format($itm->subtotal, 2) }}</span>
                                 </div>
                             @endforeach
+                            <div class="pcc-ticket-divider"></div>
+                            <div class="pcc-ticket-total">
+                                <span>TOTAL</span>
+                                <span>Bs. {{ number_format($vpc->total, 2) }}</span>
+                            </div>
                         </div>
 
                     </div>{{-- /pcc-slide --}}
@@ -1213,19 +1273,24 @@
             z-index: 1900;
             background: rgba(0,0,0,.75);
             display: flex;
-            align-items: center;
+            align-items: stretch;
             justify-content: center;
-            padding: .75rem;
+            padding: 0;
         }
         .pos-porcobrar-panel {
             background: #1a1a2e;
-            border-radius: 1.25rem;
             width: 100%;
             max-width: 680px;
             box-shadow: 0 24px 80px rgba(0,0,0,.6);
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            height: 100%;
+            border-radius: 0;
+        }
+        @media (min-width: 576px) {
+            .pos-porcobrar-overlay { align-items: center; padding: 1.5rem; }
+            .pos-porcobrar-panel { height: auto; max-height: 92vh; border-radius: 1.25rem; }
         }
         .pos-porcobrar-header {
             display: flex;
@@ -1268,7 +1333,8 @@
             display: flex;
             flex-direction: column;
             gap: .75rem;
-            min-height: 320px;
+            flex: 1;
+            overflow-y: auto;
         }
         .pcc-venta-meta {
             display: flex;
@@ -1278,62 +1344,64 @@
         }
         .pcc-num  { font-weight: 700; color: #fbbf24; font-size: .95rem; }
         .pcc-hora { color: #64748b; font-size: .78rem; }
-        /* Fila horizontal de imágenes — grid 4 columnas */
-        .pcc-items-row {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: .55rem;
+        /* Ticket list */
+        .pcc-detalle-title {
+            text-align: center;
+            color: #94a3b8;
+            font-size: .85rem;
+            letter-spacing: .25em;
+            font-weight: 600;
+            padding: .25rem 0;
+            border-top: 1px dashed #334155;
+            border-bottom: 1px dashed #334155;
         }
-        .pcc-item-card {
+        .pcc-ticket-list {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            position: relative;
-            background: #16213e;
-            border: 1px solid #334155;
-            border-radius: .65rem;
-            overflow: hidden;
-            padding-bottom: .4rem;
+            gap: .35rem;
+            flex: 1;
         }
-        .pcc-item-card__img {
-            width: 100%;
-            aspect-ratio: 1 / 1;
-            object-fit: cover;
-            display: block;
-        }
-        .pcc-item-card__ph {
-            width: 100%;
-            aspect-ratio: 1 / 1;
+        .pcc-ticket-row {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #0f172a;
-            color: #64748b;
+            align-items: baseline;
+            gap: .6rem;
         }
-        .pcc-item-card__qty {
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            background: rgba(0,0,0,.72);
+        .pcc-ticket-cant {
+            flex-shrink: 0;
+            font-size: 1.25rem;
+            font-weight: 800;
             color: #fbbf24;
-            font-size: .72rem;
+            min-width: 1.6rem;
+            text-align: right;
+        }
+        .pcc-ticket-nombre {
+            flex: 1;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            line-height: 1.3;
+        }
+        .pcc-ticket-precio {
+            flex-shrink: 0;
+            font-size: 1.15rem;
             font-weight: 700;
-            padding: 1px 6px;
-            border-radius: .35rem;
-            line-height: 1.6;
+            color: #4ade80;
+            font-variant-numeric: tabular-nums;
         }
-        .pcc-item-card__name {
-            font-size: .66rem;
-            color: #94a3b8;
-            text-align: center;
-            padding: .25rem .3rem 0;
-            line-height: 1.25;
-            width: 100%;
-            overflow: hidden;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
+        .pcc-ticket-divider {
+            border-top: 1px dashed #475569;
+            margin: .4rem 0;
         }
+        .pcc-ticket-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.35rem;
+            font-weight: 900;
+            color: #fff;
+            padding: .3rem 0 .5rem;
+        }
+        .pcc-ticket-total span:last-child { color: #4ade80; }
         /* Carrusel: flechas del alto del contenido */
         .pcc-carousel {
             display: flex;
