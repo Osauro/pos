@@ -56,8 +56,8 @@
                                                             </button>
                                                             @if(!isset($venta->estado) || $venta->estado !== 'Cancelado')
                                                                 <button class="btn btn-sm btn-success"
-                                                                    onclick="modalImpresion({{ $venta->id }})"
-                                                                    title="Reimprimir ticket y comanda">
+                                                                    onclick="$wire.imprimirConOpcion({{ $venta->id }}, 'ticket')"
+                                                                    title="Reimprimir ticket">
                                                                     <i class="fa-solid fa-print"></i>
                                                                 </button>
                                                             @endif
@@ -155,7 +155,31 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach ($ventaSeleccionada->ventaItems as $item)
+                                    @php
+                                        $itemsAgrupados = $ventaSeleccionada->ventaItems
+                                            ->groupBy('producto_id')
+                                            ->map(function ($group) {
+                                                $first    = $group->first();
+                                                $detalleMerged = null;
+                                                $detalles = $group->pluck('detalle')->filter(fn($d) => is_array($d));
+                                                if ($detalles->isNotEmpty()) {
+                                                    $detalleMerged = [];
+                                                    foreach ($detalles as $d) {
+                                                        foreach ($d as $k => $v) {
+                                                            $detalleMerged[$k] = ($detalleMerged[$k] ?? 0) + (int)$v;
+                                                        }
+                                                    }
+                                                }
+                                                return (object)[
+                                                    'producto' => $first->producto,
+                                                    'detalle'  => $detalleMerged,
+                                                    'cantidad' => $group->sum('cantidad'),
+                                                    'precio'   => $first->precio,
+                                                    'subtotal' => $group->sum('subtotal'),
+                                                ];
+                                            })->values();
+                                    @endphp
+                                    @foreach ($itemsAgrupados as $item)
                                         <tr>
                                             <td class="align-middle">
                                                 <strong>{{ $item->producto->nombre ?? 'Producto' }}</strong>
@@ -196,8 +220,8 @@
                             <div class="d-flex gap-1">
                                 @if ($ventaSeleccionada->estado === 'Completo')
                                     <button class="btn btn-sm btn-success"
-                                        onclick="modalImpresion({{ $ventaSeleccionada->id }})"
-                                        title="Reimprimir ticket y comanda">
+                                        onclick="$wire.imprimirConOpcion({{ $ventaSeleccionada->id }}, 'ticket')"
+                                        title="Reimprimir ticket">
                                         <i class="fa-solid fa-print me-1"></i>Reimprimir
                                     </button>
                                 @endif

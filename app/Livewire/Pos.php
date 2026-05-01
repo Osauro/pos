@@ -36,6 +36,7 @@ class Pos extends Component
     // ─── Por Cobrar ───────────────────────────────────────────────────────────
     public bool $mostrar_por_cobrar_overlay = false;
     public bool $es_venta_por_cobrar = false;
+    public bool $para_llevar = false;
 
     // ─── Inicio de caja ───────────────────────────────────────────────────────
     public bool $mostrar_modal_caja = false;
@@ -864,6 +865,15 @@ class Pos extends Component
     // ─── Por Cobrar ───────────────────────────────────────────────────────────
 
     /**
+     * Recibe la elección Para llevar / En mesa y ejecuta marcarPorCobrar.
+     */
+    public function confirmarComanda(bool $paraLlevar): void
+    {
+        $this->para_llevar = $paraLlevar;
+        $this->marcarPorCobrar();
+    }
+
+    /**
      * Marca la venta pendiente actual como "PorCobrar", imprime la comanda
      * y crea una nueva venta Pendiente vacía para seguir atendiendo.
      */
@@ -910,7 +920,7 @@ class Pos extends Component
                 $ventaParaImprimir = \App\Models\Venta::with(['items.producto', 'turno.encargado', 'usuario'])
                     ->find($ventaId);
                 $svc   = app(\App\Services\EscposPrintService::class);
-                $built = $svc->buildComandaJob($ventaParaImprimir);
+                $built = $svc->buildComandaJob($ventaParaImprimir, $this->para_llevar);
                 if ($built['ok']) {
                     $this->dispatch('print-agent',
                         payload: array_merge(['printer' => $built['printer']], $built['job']),

@@ -578,10 +578,16 @@ class EscposPrintService
 
             $items = $venta->items
                 ->filter(fn($i) => $i->producto)
-                ->map(fn($i) => [
-                    'text'  => $i->cantidad . ' ' . $this->pluralizarNombre($i->producto->nombre, (int) $i->cantidad),
-                    'price' => (float) $i->subtotal,
-                ])->values()->toArray();
+                ->groupBy('producto_id')
+                ->map(function ($group) {
+                    $first    = $group->first();
+                    $cantidad = $group->sum('cantidad');
+                    $subtotal = $group->sum('subtotal');
+                    return [
+                        'text'  => $cantidad . ' ' . $this->pluralizarNombre($first->producto->nombre, (int) $cantidad),
+                        'price' => (float) $subtotal,
+                    ];
+                })->values()->toArray();
 
             $totals = ['TOTAL' => (float) $venta->total];
 
@@ -627,7 +633,7 @@ class EscposPrintService
      *
      * @return array ['ok' => bool, 'printer' => string, 'job' => array] | ['ok' => false, 'error' => string]
      */
-    public function buildComandaJob(Venta $venta): array
+    public function buildComandaJob(Venta $venta, bool $paraLlevar = false): array
     {
         try {
             $tenant = \App\Helpers\TenantHelper::current();
@@ -682,7 +688,11 @@ class EscposPrintService
                 }
             }
 
-            $footer = "\x0A\x0A\x0A\x1D\x56\x41\x00";
+            if ($paraLlevar) {
+                $body .= "\x0A\x1B\x61\x01\x1D\x21\x01\x1B\x45\x01" . $this->sanitize('PARA LLEVAR') . "\x1B\x45\x00\x1D\x21\x00";
+            }
+
+            $footer = "\x0A\x0A\x1D\x56\x41\x00";
 
             return [
                 'ok'      => true,

@@ -265,9 +265,9 @@
                             {{ empty($carrito) ? 'disabled' : '' }}>
                         <i class="fa-solid fa-ban"></i>
                     </button>
-                    <button wire:click="marcarPorCobrar"
+                    <button @click="pedirTipoEntrega($wire)"
                             wire:loading.attr="disabled"
-                            wire:target="marcarPorCobrar"
+                            wire:target="confirmarComanda"
                             class="btn btn-warning btn-lg fw-bold flex-fill"
                             title="Enviar comanda y dejar Por Cobrar"
                             {{ empty($carrito) ? 'disabled' : '' }}>
@@ -286,9 +286,9 @@
                         <i class="fa-solid fa-plus"></i>
                     </button>
                     @if($hayNuevosEsc)
-                    <button wire:click="marcarPorCobrar"
+                    <button @click="pedirTipoEntrega($wire)"
                             wire:loading.attr="disabled"
-                            wire:target="marcarPorCobrar"
+                            wire:target="confirmarComanda"
                             class="btn btn-warning btn-lg fw-bold flex-fill"
                             title="Enviar nuevos items a comanda">
                         <i class="fa-solid fa-kitchen-set me-2"></i>Comanda Bs. {{ number_format($total, 2) }}
@@ -322,7 +322,7 @@
              _t: null,
              start() {
                  this.clear();
-                 this.secs = 10;
+                 this.secs = 120;
                  this._t = setInterval(() => {
                      this.secs--;
                      if (this.secs <= 0) {
@@ -344,7 +344,7 @@
         <div class="comanda-timer-pill"
              x-show="secs > 0"
              x-transition
-             x-text="'Nueva venta en ' + secs + 's'">
+             x-text="secs >= 60 ? 'Nueva venta en ' + Math.floor(secs/60) + 'm ' + (secs%60).toString().padStart(2,'0') + 's' : 'Nueva venta en ' + secs + 's'">
         </div>
 
         @if(!$es_venta_por_cobrar)
@@ -353,9 +353,9 @@
                 {{ empty($carrito) ? 'disabled' : '' }}>
             <i class="fa-solid fa-ban"></i>
         </button>
-        <button wire:click="marcarPorCobrar"
+        <button @click="pedirTipoEntrega($wire)"
                 wire:loading.attr="disabled"
-                wire:target="marcarPorCobrar"
+                wire:target="confirmarComanda"
                 class="pos-act pos-act--comanda"
                 style="flex:2"
                 {{ empty($carrito) ? 'disabled' : '' }}>
@@ -368,9 +368,9 @@
             <i class="fa-solid fa-plus"></i>
         </button>
         @if($hayNuevosMovil)
-        <button wire:click="marcarPorCobrar"
+        <button @click="pedirTipoEntrega($wire)"
                 wire:loading.attr="disabled"
-                wire:target="marcarPorCobrar"
+                wire:target="confirmarComanda"
                 class="pos-act pos-act--comanda"
                 style="flex:2">
             <span class="pos-act__monto">Bs. {{ number_format($total, 2) }}</span>
@@ -525,10 +525,22 @@
 
                         {{-- Lista de items estilo ticket --}}
                         <div class="pcc-ticket-list">
-                            @foreach($vpc->ventaItems as $itm)
+                            @php
+                                $itmAgrupados = $vpc->ventaItems
+                                    ->groupBy('producto_id')
+                                    ->map(function ($grp) {
+                                        $f = $grp->first();
+                                        return (object)[
+                                            'nombre'   => $f->producto?->nombre ?? '—',
+                                            'cantidad' => $grp->sum('cantidad'),
+                                            'subtotal' => $grp->sum('subtotal'),
+                                        ];
+                                    })->values();
+                            @endphp
+                            @foreach($itmAgrupados as $itm)
                                 <div class="pcc-ticket-row">
                                     <span class="pcc-ticket-cant">{{ $itm->cantidad }}</span>
-                                    <span class="pcc-ticket-nombre">{{ $itm->producto?->nombre ?? '—' }}</span>
+                                    <span class="pcc-ticket-nombre">{{ $itm->nombre }}</span>
                                     <span class="pcc-ticket-precio">{{ number_format($itm->subtotal, 2) }}</span>
                                 </div>
                             @endforeach
@@ -574,11 +586,13 @@
                     @endforeach
                 </div>
 
-                {{-- Dots --}}
+                {{-- Nav botones por venta --}}
                 @if($ventasPorCobrar->count() > 1)
                     <div class="pcc-dots">
                         @foreach($ventasPorCobrar as $di => $dvpc)
-                            <button class="pcc-dot" :class="{ 'pcc-dot--active': slide === {{ $di }} }" @click="slide = {{ $di }}"></button>
+                            <button class="pcc-dot" :class="{ 'pcc-dot--active': slide === {{ $di }} }" @click="slide = {{ $di }}">
+                                #{{ $dvpc->numero_venta }}
+                            </button>
                         @endforeach
                     </div>
                 @endif
@@ -1440,24 +1454,31 @@
             display: flex;
             gap: .6rem;
         }
-        /* Dots */
+        /* Nav botones por venta */
         .pcc-dots {
             display: flex;
+            flex-wrap: wrap;
             justify-content: center;
-            gap: .4rem;
-            padding: .4rem 0 .8rem;
+            gap: .35rem;
+            padding: .5rem .5rem .8rem;
         }
         .pcc-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #334155;
-            border: none;
+            font-size: .75rem;
+            font-weight: 700;
+            color: #94a3b8;
+            background: #1e2a3a;
+            border: 1px solid #334155;
+            border-radius: .4rem;
+            padding: .2rem .55rem;
             cursor: pointer;
-            padding: 0;
-            transition: background .2s, transform .2s;
+            transition: background .2s, color .2s, border-color .2s;
+            white-space: nowrap;
         }
-        .pcc-dot--active { background: #fbbf24; transform: scale(1.35); }
+        .pcc-dot--active {
+            background: #fbbf24;
+            color: #1a1a2e;
+            border-color: #fbbf24;
+        }
         /* Botones de acción */
         .pos-porcobrar-btn {
             display: flex;
@@ -1500,6 +1521,37 @@
 
 @script
 <script>
+    // Swal para elegir tipo de entrega antes de enviar comanda
+    window.pedirTipoEntrega = function(wire) {
+        Swal.fire({
+            title: '¿Tipo de entrega?',
+            html: `
+                <div class="d-flex gap-3 mt-2 justify-content-center">
+                    <button id="btn-llevar" class="btn btn-warning fw-bold px-4 py-3" style="font-size:1.1rem;">
+                        <i class="fa-solid fa-bag-shopping d-block mb-1" style="font-size:1.5rem;"></i>
+                        Para llevar
+                    </button>
+                    <button id="btn-mesa" class="btn btn-outline-secondary fw-bold px-4 py-3" style="font-size:1.1rem;">
+                        <i class="fa-solid fa-utensils d-block mb-1" style="font-size:1.5rem;"></i>
+                        En mesa
+                    </button>
+                </div>
+            `,
+            showConfirmButton: false,
+            showCancelButton: false,
+            didOpen: () => {
+                document.getElementById('btn-llevar').addEventListener('click', () => {
+                    Swal.close();
+                    wire.confirmarComanda(true);
+                });
+                document.getElementById('btn-mesa').addEventListener('click', () => {
+                    Swal.close();
+                    wire.confirmarComanda(false);
+                });
+            }
+        });
+    };
+
     // Garantiza que playSound esté disponible sin importar el orden de carga
     if (typeof window.playSound !== 'function') {
         const _sc = {};
