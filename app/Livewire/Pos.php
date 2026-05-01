@@ -901,34 +901,32 @@ class Pos extends Component
 
         $ventaId = $this->venta_id;
 
-        // Limpiar el carrito activo y crear nueva venta Pendiente
-        $this->venta_id = null;
-        $this->carrito  = [];
-        $this->total    = 0;
-        $this->mostrar_carrito = false;
-        $this->iniciarVentaPendiente();
+        // Mantener carrito visible y pasar al estado "Por Cobrar" para cobrar
+        $this->es_venta_por_cobrar = true;
 
-        // Imprimir comanda de la venta marcada (solo items nuevos, no impresos aún)
-        try {
-            $ventaParaImprimir = \App\Models\Venta::with(['items.producto', 'turno.encargado', 'usuario'])
-                ->find($ventaId);
-            $svc = app(\App\Services\EscposPrintService::class);
-            $built = $svc->buildComandaJob($ventaParaImprimir);
-            if ($built['ok']) {
-                $this->dispatch('print-agent',
-                    payload: array_merge(['printer' => $built['printer']], $built['job']),
-                    ventaId: $ventaId
-                );
-                // Marcar los items recién enviados como ya impresos
-                VentaItem::where('venta_id', $ventaId)
-                    ->where('comanda_impresa', false)
-                    ->update(['comanda_impresa' => true]);
+        // Imprimir comanda solo si está habilitada
+        if ($this->auto_comanda) {
+            try {
+                $ventaParaImprimir = \App\Models\Venta::with(['items.producto', 'turno.encargado', 'usuario'])
+                    ->find($ventaId);
+                $svc = app(\App\Services\EscposPrintService::class);
+                $built = $svc->buildComandaJob($ventaParaImprimir);
+                if ($built['ok']) {
+                    $this->dispatch('print-agent',
+                        payload: array_merge(['printer' => $built['printer']], $built['job']),
+                        ventaId: $ventaId
+                    );
+                    VentaItem::where('venta_id', $ventaId)
+                        ->where('comanda_impresa', false)
+                        ->update(['comanda_impresa' => true]);
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Error impresión comanda PorCobrar: ' . $e->getMessage());
             }
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Error impresión comanda PorCobrar: ' . $e->getMessage());
+            $this->swalSuccess('Comanda enviada', 'La venta quedó en estado Por Cobrar.');
+        } else {
+            $this->swalSuccess('Por Cobrar', 'La venta quedó en estado Por Cobrar.');
         }
-
-        $this->swalSuccess('Comanda enviada', 'La venta quedó en estado Por Cobrar. Se imprimió la comanda.');
     }
 
     /**

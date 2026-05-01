@@ -13,7 +13,7 @@ trait WithSwal
             'icon' => 'success',
             'title' => $title,
             'text' => $text,
-            'timer' => 3000,
+            'timer' => 800,
             'showConfirmButton' => false
         ]);
     }
@@ -27,7 +27,7 @@ trait WithSwal
             'icon' => 'error',
             'title' => $title,
             'text' => $text,
-            'timer' => 3000,
+            'timer' => 800,
             'showConfirmButton' => false
         ]);
     }
@@ -41,7 +41,7 @@ trait WithSwal
             'icon' => 'warning',
             'title' => $title,
             'text' => $text,
-            'timer' => 3000,
+            'timer' => 800,
             'showConfirmButton' => false
         ]);
     }
@@ -55,7 +55,7 @@ trait WithSwal
             'icon' => 'info',
             'title' => $title,
             'text' => $text,
-            'timer' => 3000,
+            'timer' => 800,
             'showConfirmButton' => false
         ]);
     }

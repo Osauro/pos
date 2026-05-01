@@ -265,42 +265,28 @@
                             {{ empty($carrito) ? 'disabled' : '' }}>
                         <i class="fa-solid fa-ban"></i>
                     </button>
-                    @endif
-                    @if($hayItemsNuevos)
                     <button wire:click="marcarPorCobrar"
                             wire:loading.attr="disabled"
                             wire:target="marcarPorCobrar"
-                            class="btn btn-warning btn-lg px-3"
-                            title="Imprimir comanda y dejar Por Cobrar"
+                            class="btn btn-warning btn-lg fw-bold flex-fill"
+                            title="Enviar comanda y dejar Por Cobrar"
                             {{ empty($carrito) ? 'disabled' : '' }}>
-                        <i class="fa-solid fa-kitchen-set"></i>
-                        <span class="d-none d-xl-inline ms-1">Comanda</span>
-                    </button>
-                    @elseif($es_venta_por_cobrar)
-                    <button wire:click="descartarEdicionPorCobrar"
-                            class="btn btn-outline-secondary btn-lg px-3"
-                            title="Cerrar e iniciar nueva venta">
-                        <i class="fa-solid fa-plus"></i>
-                        <span class="d-none d-xl-inline ms-1">Nueva</span>
+                        <i class="fa-solid fa-kitchen-set me-2"></i>Comanda Bs. {{ number_format($total, 2) }}
                     </button>
                     @else
-                    <button wire:click="marcarPorCobrar"
-                            wire:loading.attr="disabled"
-                            wire:target="marcarPorCobrar"
-                            class="btn btn-warning btn-lg px-3"
-                            title="Imprimir comanda y dejar Por Cobrar"
-                            {{ empty($carrito) ? 'disabled' : '' }}>
-                        <i class="fa-solid fa-kitchen-set"></i>
-                        <span class="d-none d-xl-inline ms-1">Comanda</span>
+                    <button wire:click="descartarEdicionPorCobrar"
+                            class="btn btn-outline-secondary btn-lg px-3"
+                            title="Nueva venta">
+                        <i class="fa-solid fa-plus"></i>
                     </button>
-                    @endif
                     <button @click="$dispatch('abrir-cobro', { total: {{ $total }} })"
                             wire:loading.attr="disabled"
                             wire:target="procesarVenta"
                             class="btn btn-success btn-lg fw-bold flex-fill"
                             {{ empty($carrito) ? 'disabled' : '' }}>
-                        <i class="fa-solid fa-check me-2"></i>Bs. {{ number_format($total, 2) }}
+                        <i class="fa-solid fa-check me-2"></i>Pagar Bs. {{ number_format($total, 2) }}
                     </button>
+                    @endif
                 </div>
             </div>
         </div>
@@ -314,32 +300,28 @@
                 class="pos-act pos-act--danger"
                 {{ empty($carrito) ? 'disabled' : '' }}>
             <i class="fa-solid fa-ban"></i>
-            <span>Cancelar</span>
         </button>
-        @endif
-        @if($hayItemsNuevos)
         <button wire:click="marcarPorCobrar"
                 wire:loading.attr="disabled"
                 wire:target="marcarPorCobrar"
                 class="pos-act pos-act--comanda"
+                style="flex:2"
                 {{ empty($carrito) ? 'disabled' : '' }}>
             <i class="fa-solid fa-kitchen-set"></i>
-            <span>Comanda</span>
+            <span>Bs. {{ number_format($total, 2) }}</span>
         </button>
-        @elseif($es_venta_por_cobrar)
+        @else
         <button wire:click="descartarEdicionPorCobrar"
                 class="pos-act">
             <i class="fa-solid fa-plus"></i>
-            <span>Nueva venta</span>
         </button>
-        @else
-        <button wire:click="marcarPorCobrar"
+        <button @click="$dispatch('abrir-cobro', { total: {{ $total }} })"
                 wire:loading.attr="disabled"
-                wire:target="marcarPorCobrar"
-                class="pos-act pos-act--comanda"
+                wire:target="procesarVenta"
+                class="pos-act pos-act--pay"
                 {{ empty($carrito) ? 'disabled' : '' }}>
-            <i class="fa-solid fa-kitchen-set"></i>
-            <span>Comanda</span>
+            <i class="fa-solid fa-check"></i>
+            <span>Bs. {{ number_format($total, 2) }}</span>
         </button>
         @endif
         <button wire:click="toggleCarrito" class="pos-act pos-act--cart">
@@ -349,14 +331,6 @@
             @if($totalItems > 0)
                 <span class="pos-act__badge">{{ $totalItems }}</span>
             @endif
-        </button>
-        <button @click="$dispatch('abrir-cobro', { total: {{ $total }} })"
-                wire:loading.attr="disabled"
-                wire:target="procesarVenta"
-                class="pos-act pos-act--pay"
-                {{ empty($carrito) ? 'disabled' : '' }}>
-            <i class="fa-solid fa-check"></i>
-            <span>Bs. {{ number_format($total, 2) }}</span>
         </button>
     </div>
 
