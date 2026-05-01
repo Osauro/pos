@@ -64,6 +64,21 @@ return [
             ]) : [],
         ],
 
+        // ── Servidor remoto (backup / sync) ──────────────────────────────────
+        'db1' => [
+            'driver'    => 'mysql',
+            'host'      => env('DB1_HOST', '127.0.0.1'),
+            'port'      => env('DB1_PORT', '3306'),
+            'database'  => env('DB1_DATABASE', 'laravel'),
+            'username'  => env('DB1_USERNAME', 'root'),
+            'password'  => env('DB1_PASSWORD', ''),
+            'charset'   => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix'    => '',
+            'strict'    => false,
+            'options'   => [],
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),

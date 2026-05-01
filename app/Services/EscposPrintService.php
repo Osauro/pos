@@ -86,9 +86,9 @@ class EscposPrintService
 
     private function buildComandaUrlInternal(Venta $venta, $tenant): ?string
     {
-        $items = $venta->items->filter(fn($i) => $i->producto && $i->producto->tipo === 'Platos');
+        $items = $venta->items->filter(fn($i) => $i->producto && $i->producto->tipo === 'Platos' && !$i->comanda_impresa);
         if ($items->isEmpty()) return null;
-        $porciones = $venta->items->filter(fn($i) => $i->producto && $i->producto->tipo === 'Porciones');
+        $porciones = $venta->items->filter(fn($i) => $i->producto && $i->producto->tipo === 'Porciones' && !$i->comanda_impresa);
         $json = $this->buildComandaJson($venta, $items, $porciones, $tenant);
         return 'print://' . $this->encodePayload($json, $tenant);
     }
@@ -645,10 +645,11 @@ class EscposPrintService
             }
 
             $cols      = ((int) ($tenant?->printer_width ?? config('printer.width', 80))) >= 80 ? 48 : 32;
-            $todosItems = $venta->items->filter(fn($i) => $i->producto);
+            // Solo items aún no enviados a cocina
+            $todosItems = $venta->items->filter(fn($i) => $i->producto && !$i->comanda_impresa);
 
             if ($todosItems->isEmpty()) {
-                return ['ok' => false, 'error' => 'No hay ítems para la comanda'];
+                return ['ok' => false, 'error' => 'No hay ítems nuevos para la comanda'];
             }
 
             $platos    = $todosItems->filter(fn($i) => $i->producto->tipo === 'Platos');

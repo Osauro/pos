@@ -33,6 +33,10 @@ class Pos extends Component
     public bool $auto_ticket  = true;
     public bool $auto_comanda = true;
 
+    // ─── Por Cobrar ───────────────────────────────────────────────────────────
+    public bool $mostrar_por_cobrar_overlay = false;
+    public bool $es_venta_por_cobrar = false;
+
     // ─── Inicio de caja ───────────────────────────────────────────────────────
     public bool $mostrar_modal_caja = false;
     public string $monto_caja = '';
@@ -120,6 +124,7 @@ class Pos extends Component
         }
 
         $this->venta_id = $venta->id;
+        $this->es_venta_por_cobrar = false;
         $this->sincronizarCarritoDesdeDB($venta);
     }
 
@@ -130,38 +135,40 @@ class Pos extends Component
 
         foreach ($venta->ventaItems as $item) {
             if (is_array($item->detalle)) {
-                // Platos: un único VentaItem con detalle como JSON
-                $key = "p_{$item->producto_id}";
+                // Platos: impresos → pp_{id} (read-only), sin imprimir → p_{productoId} (editable)
+                $key = $item->comanda_impresa ? "pp_{$item->id}" : "p_{$item->producto_id}";
                 $acomp = [
                     'arroz' => (int) ($item->detalle['arroz'] ?? 0),
                     'fideo' => (int) ($item->detalle['fideo'] ?? 0),
                     'mixto' => (int) ($item->detalle['mixto'] ?? 0),
                 ];
                 $this->carrito[$key] = [
-                    'tipo'        => 'plato',
-                    'producto_id' => $item->producto_id,
-                    'nombre'      => $item->producto->nombre ?? 'Producto',
-                    'imagen'      => $item->producto->imagen ?? null,
-                    'categoria'   => $item->producto->tipo ?? 'Platos',
-                    'precio'      => (float) $item->precio,
-                    'item_id'     => $item->id,
-                    'acomp'       => $acomp,
-                    'cantidad'    => array_sum($acomp),
-                    'subtotal'    => array_sum($acomp) * (float) $item->precio,
+                    'tipo'             => 'plato',
+                    'producto_id'      => $item->producto_id,
+                    'nombre'           => $item->producto->nombre ?? 'Producto',
+                    'imagen'           => $item->producto->imagen ?? null,
+                    'categoria'        => $item->producto->tipo ?? 'Platos',
+                    'precio'           => (float) $item->precio,
+                    'item_id'          => $item->id,
+                    'acomp'            => $acomp,
+                    'cantidad'         => array_sum($acomp),
+                    'subtotal'         => array_sum($acomp) * (float) $item->precio,
+                    'comanda_impresa'  => (bool) $item->comanda_impresa,
                 ];
             } else {
                 // Simple: una entrada por producto
                 $key = "s_{$item->producto_id}";
                 $this->carrito[$key] = [
-                    'tipo'        => 'simple',
-                    'producto_id' => $item->producto_id,
-                    'nombre'      => $item->producto->nombre ?? 'Producto',
-                    'imagen'      => $item->producto->imagen ?? null,
-                    'categoria'   => $item->producto->tipo ?? 'Refrescos',
-                    'precio'      => (float) $item->precio,
-                    'item_id'     => $item->id,
-                    'cantidad'    => $item->cantidad,
-                    'subtotal'    => (float) $item->subtotal,
+                    'tipo'            => 'simple',
+                    'producto_id'     => $item->producto_id,
+                    'nombre'          => $item->producto->nombre ?? 'Producto',
+                    'imagen'          => $item->producto->imagen ?? null,
+                    'categoria'       => $item->producto->tipo ?? 'Refrescos',
+                    'precio'          => (float) $item->precio,
+                    'item_id'         => $item->id,
+                    'cantidad'        => $item->cantidad,
+                    'subtotal'        => (float) $item->subtotal,
+                    'comanda_impresa' => (bool) $item->comanda_impresa,
                 ];
             }
         }
@@ -205,7 +212,16 @@ class Pos extends Component
             $waEnabled = !empty($ownerUser?->celular);
         }
 
-        return view('livewire.pos', compact('productos', 'qrImagen', 'waEnabled'));
+        $ventasPorCobrar = Venta::where('estado', 'PorCobrar')
+            ->with('ventaItems.producto')
+            ->orderBy('fecha_hora')
+            ->get();
+
+        $hayItemsNuevos = $this->venta_id
+            ? VentaItem::where('venta_id', $this->venta_id)->where('comanda_impresa', false)->exists()
+            : false;
+
+        return view('livewire.pos', compact('productos', 'qrImagen', 'waEnabled', 'ventasPorCobrar', 'hayItemsNuevos'));
     }
 
     public function setOrdenProductos(string $orden): void
@@ -377,16 +393,17 @@ class Pos extends Component
                     'detalle'     => $acomp,
                 ]);
                 $this->carrito[$key] = [
-                    'tipo'        => 'plato',
-                    'producto_id' => $producto->id,
-                    'nombre'      => $producto->nombre,
-                    'imagen'      => $producto->imagen ?? null,
-                    'categoria'   => $producto->tipo ?? 'Platos',
-                    'precio'      => (float) $producto->precio,
-                    'item_id'     => $item->id,
-                    'acomp'       => $acomp,
-                    'cantidad'    => 1,
-                    'subtotal'    => (float) $producto->precio,
+                    'tipo'            => 'plato',
+                    'producto_id'     => $producto->id,
+                    'nombre'          => $producto->nombre,
+                    'imagen'          => $producto->imagen ?? null,
+                    'categoria'       => $producto->tipo ?? 'Platos',
+                    'precio'          => (float) $producto->precio,
+                    'item_id'         => $item->id,
+                    'acomp'           => $acomp,
+                    'cantidad'        => 1,
+                    'subtotal'        => (float) $producto->precio,
+                    'comanda_impresa' => false,
                 ];
             } else {
                 $this->carrito[$key]['acomp'][$detalle]++;
@@ -425,15 +442,16 @@ class Pos extends Component
                     'detalle'     => null,
                 ]);
                 $this->carrito[$key] = [
-                    'tipo'        => 'simple',
-                    'producto_id' => $producto->id,
-                    'nombre'      => $producto->nombre,
-                    'imagen'      => $producto->imagen ?? null,
-                    'categoria'   => $producto->tipo ?? 'Refrescos',
-                    'precio'      => (float) $producto->precio,
-                    'item_id'     => $item->id,
-                    'cantidad'    => 1,
-                    'subtotal'    => (float) $producto->precio,
+                    'tipo'            => 'simple',
+                    'producto_id'     => $producto->id,
+                    'nombre'          => $producto->nombre,
+                    'imagen'          => $producto->imagen ?? null,
+                    'categoria'       => $producto->tipo ?? 'Refrescos',
+                    'precio'          => (float) $producto->precio,
+                    'item_id'         => $item->id,
+                    'cantidad'        => 1,
+                    'subtotal'        => (float) $producto->precio,
+                    'comanda_impresa' => false,
                 ];
             }
         }
@@ -629,6 +647,10 @@ class Pos extends Component
                         payload: array_merge(['printer' => $built['printer']], $built['job']),
                         ventaId: $ventaCompletadaId
                     );
+                    // Marcar items enviados a cocina como ya impresos
+                    VentaItem::where('venta_id', $ventaCompletadaId)
+                        ->where('comanda_impresa', false)
+                        ->update(['comanda_impresa' => true]);
                 }
             }
 
@@ -716,6 +738,29 @@ class Pos extends Component
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('WA comprobante: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Descarta la edición de una venta PorCobrar sin cancelarla:
+     * la devuelve a estado PorCobrar e inicia una nueva venta Pendiente vacía.
+     */
+    public function descartarEdicionPorCobrar(): void
+    {
+        try {
+            Venta::where('id', $this->venta_id)
+                ->where('estado', 'Pendiente')
+                ->update(['estado' => 'PorCobrar']);
+        } catch (\Exception $e) {
+            $this->showErrorNotification('Error al descartar: ' . $e->getMessage());
+            return;
+        }
+
+        $this->venta_id        = null;
+        $this->carrito         = [];
+        $this->total           = 0;
+        $this->mostrar_carrito = false;
+        $this->es_venta_por_cobrar = false;
+        $this->iniciarVentaPendiente();
     }
 
     // ─── Cancelar venta ───────────────────────────────────────────────────────
@@ -814,5 +859,189 @@ class Pos extends Component
 
         $ultimo = $query->orderBy('numero_venta', 'desc')->value('numero_venta');
         return $ultimo ? $ultimo + 1 : 1;
+    }
+
+    // ─── Por Cobrar ───────────────────────────────────────────────────────────
+
+    /**
+     * Marca la venta pendiente actual como "PorCobrar", imprime la comanda
+     * y crea una nueva venta Pendiente vacía para seguir atendiendo.
+     */
+    public function marcarPorCobrar(): void
+    {
+        if (empty($this->carrito)) {
+            $this->swalWarning('Carrito vacío', 'Agrega productos antes de marcar como Por Cobrar.');
+            return;
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $venta = Venta::findOrFail($this->venta_id);
+            $turnoActivo = $this->getTurnoActivo();
+
+            // Asignar número de venta si aún no tiene
+            if (!$venta->numero_venta) {
+                $venta->numero_venta = $this->getNumeroVenta($turnoActivo);
+            }
+
+            $venta->update([
+                'estado'     => 'PorCobrar',
+                'fecha_hora' => now(),
+                'total'      => $this->total,
+                'numero_venta' => $venta->numero_venta,
+            ]);
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $this->showErrorNotification('Error: ' . $e->getMessage());
+            return;
+        }
+
+        $ventaId = $this->venta_id;
+
+        // Limpiar el carrito activo y crear nueva venta Pendiente
+        $this->venta_id = null;
+        $this->carrito  = [];
+        $this->total    = 0;
+        $this->mostrar_carrito = false;
+        $this->iniciarVentaPendiente();
+
+        // Imprimir comanda de la venta marcada (solo items nuevos, no impresos aún)
+        try {
+            $ventaParaImprimir = \App\Models\Venta::with(['items.producto', 'turno.encargado', 'usuario'])
+                ->find($ventaId);
+            $svc = app(\App\Services\EscposPrintService::class);
+            $built = $svc->buildComandaJob($ventaParaImprimir);
+            if ($built['ok']) {
+                $this->dispatch('print-agent',
+                    payload: array_merge(['printer' => $built['printer']], $built['job']),
+                    ventaId: $ventaId
+                );
+                // Marcar los items recién enviados como ya impresos
+                VentaItem::where('venta_id', $ventaId)
+                    ->where('comanda_impresa', false)
+                    ->update(['comanda_impresa' => true]);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error impresión comanda PorCobrar: ' . $e->getMessage());
+        }
+
+        $this->swalSuccess('Comanda enviada', 'La venta quedó en estado Por Cobrar. Se imprimió la comanda.');
+    }
+
+    /**
+     * Abre el overlay de ventas Por Cobrar.
+     */
+    public function abrirVentasPorCobrar(): void
+    {
+        $this->mostrar_por_cobrar_overlay = true;
+    }
+
+    /**
+     * Cierra el overlay de ventas Por Cobrar.
+     */
+    public function cerrarVentasPorCobrar(): void
+    {
+        $this->mostrar_por_cobrar_overlay = false;
+    }
+
+    /**
+     * Carga una venta PorCobrar como el carrito activo para seguir editándola o cobrarla.
+     * El carrito actual (Pendiente vacío) se elimina y la venta seleccionada pasa a Pendiente.
+     */
+    public function cargarVentaPorCobrar(int $ventaId): void
+    {
+        if (!empty($this->carrito)) {
+            $this->swalWarning(
+                'Carrito activo',
+                'Primero marca el pedido actual como "Por Cobrar" o cancélalo antes de cargar otro.'
+            );
+            return;
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Eliminar la venta Pendiente vacía actual
+            Venta::where('id', $this->venta_id)
+                ->where('estado', 'Pendiente')
+                ->delete();
+
+            // Activar la venta PorCobrar como Pendiente
+            Venta::where('id', $ventaId)
+                ->where('estado', 'PorCobrar')
+                ->update(['estado' => 'Pendiente']);
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $this->showErrorNotification('Error: ' . $e->getMessage());
+            return;
+        }
+
+        $this->venta_id = $ventaId;
+        $this->mostrar_por_cobrar_overlay = false;
+        $this->es_venta_por_cobrar = true;
+
+        $venta = Venta::with('ventaItems.producto')->find($ventaId);
+        $this->sincronizarCarritoDesdeDB($venta);
+
+        $this->swalInfo('Pedido cargado', 'Puedes añadir más productos o cobrar directamente.');
+    }
+
+    /**
+     * Carga la venta PorCobrar como activa y abre el panel de cobro directamente.
+     */
+    public function cobrarVentaPorCobrar(int $ventaId): void
+    {
+        if (!empty($this->carrito)) {
+            $this->swalWarning(
+                'Carrito activo',
+                'Primero marca el pedido actual como "Por Cobrar" o cancélalo antes de cobrar otro.'
+            );
+            return;
+        }
+
+        try {
+            DB::beginTransaction();
+
+            Venta::where('id', $this->venta_id)
+                ->where('estado', 'Pendiente')
+                ->delete();
+
+            Venta::where('id', $ventaId)
+                ->where('estado', 'PorCobrar')
+                ->update(['estado' => 'Pendiente']);
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $this->showErrorNotification('Error: ' . $e->getMessage());
+            return;
+        }
+
+        $this->venta_id = $ventaId;
+        $this->mostrar_por_cobrar_overlay = false;
+        $this->es_venta_por_cobrar = true;
+
+        $venta = Venta::with('ventaItems.producto')->find($ventaId);
+        $this->sincronizarCarritoDesdeDB($venta);
+
+        // Abrir panel de cobro con el total actualizado
+        $this->dispatch('abrir-cobro', total: $this->total);
+    }
+
+    /**
+     * Cancela (elimina) una venta PorCobrar desde el overlay.
+     */
+    public function cancelarVentaPorCobrar(int $ventaId): void
+    {
+        Venta::where('id', $ventaId)
+            ->where('estado', 'PorCobrar')
+            ->delete();
+
+        $this->swalSuccess('Pedido eliminado', 'La venta Por Cobrar fue cancelada.');
     }
 }

@@ -15,6 +15,18 @@
                 @endforeach
             </div>
             <div class="btn-group flex-shrink-0" role="group">
+                <button wire:click="abrirVentasPorCobrar"
+                        title="Ver ventas Por Cobrar"
+                        class="btn btn-sm pos-action-btn {{ $ventasPorCobrar->count() > 0 ? 'btn-warning' : 'btn-outline-secondary' }}"
+                        style="position:relative">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span class="d-none d-lg-inline ms-1">Por cobrar</span>
+                    @if($ventasPorCobrar->count() > 0)
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem">
+                            {{ $ventasPorCobrar->count() }}
+                        </span>
+                    @endif
+                </button>
                 <button wire:click="toggleAutoComanda"
                         title="{{ $auto_comanda ? 'Comanda ON' : 'Comanda OFF' }}"
                         class="btn btn-sm pos-action-btn {{ $auto_comanda ? 'btn-success' : 'btn-outline-secondary' }}">
@@ -162,7 +174,8 @@
             {{-- Lista de items --}}
             <div class="pos-cart-body p-2 bg-light">
                 @forelse($carrito as $key => $item)
-                    <div class="card border-0 shadow-sm mb-2">
+                    @php $impreso = $item['comanda_impresa'] ?? false; @endphp
+                    <div class="card border-0 shadow-sm mb-2 {{ $impreso ? 'opacity-60' : '' }}">
                         <div class="card-body p-2">
                             <div class="d-flex align-items-stretch gap-2">
 
@@ -170,7 +183,7 @@
                                 @if($item['imagen'])
                                     <img src="{{ asset('storage/' . $item['imagen']) }}"
                                          class="rounded flex-shrink-0 align-self-center"
-                                         style="width:56px;height:56px;object-fit:cover">
+                                         style="width:56px;height:56px;object-fit:cover{{ $impreso ? ';filter:grayscale(.5)' : '' }}">
                                 @else
                                     <div class="rounded flex-shrink-0 align-self-center bg-light border d-flex align-items-center justify-content-center"
                                          style="width:56px;height:56px">
@@ -181,17 +194,23 @@
                                 {{-- Columna contenido --}}
                                 <div class="flex-fill d-flex flex-column justify-content-center" style="min-width:0;gap:3px">
 
-                                    {{-- Fila 1: cantidad - nombre | [X] --}}
+                                    {{-- Fila 1: cantidad - nombre | badge impreso o [X] --}}
                                     <div class="d-flex align-items-center justify-content-between gap-1 w-100">
                                         <div class="d-flex align-items-center gap-1 flex-fill" style="min-width:0">
                                             <span class="fw-bold flex-shrink-0" style="font-size:.85rem">{{ $item['cantidad'] }}</span>
                                             <span class="text-muted flex-shrink-0" style="font-size:.85rem">-</span>
                                             <span class="text-truncate" style="font-size:.85rem">{{ $item['nombre'] }}</span>
                                         </div>
+                                        @if($impreso)
+                                            <span class="badge bg-secondary flex-shrink-0" style="font-size:.6rem">
+                                                <i class="fa-solid fa-check me-1"></i>enviado
+                                            </span>
+                                        @else
                                         <button wire:click="eliminarDelCarrito('{{ $key }}')"
                                                 class="btn btn-outline-danger btn-sm flex-shrink-0 py-0 px-1" style="line-height:1.4">
                                             <i class="fa-solid fa-xmark" style="font-size:.7rem"></i>
                                         </button>
+                                        @endif
                                     </div>
 
                                     {{-- Fila 2: detalles | subtotal --}}
@@ -202,12 +221,16 @@
                                                     @if(($item['acomp'][$det] ?? 0) > 0)
                                                     <div class="d-flex align-items-center gap-1 flex-shrink-0">
                                                         <span class="text-muted" style="font-size:.75rem">{{ $etiqueta }}:</span>
+                                                        @if($impreso)
+                                                            <span style="font-size:.78rem;font-weight:600">{{ $item['acomp'][$det] }}</span>
+                                                        @else
                                                         <input type="number" min="0"
                                                                class="form-control form-control-sm text-center px-0"
                                                                style="width:36px;height:22px;font-size:.78rem"
                                                                value="{{ $item['acomp'][$det] }}"
                                                                x-on:focus="$event.target.select()"
                                                                x-on:change="$wire.actualizarAcompanamiento('{{ $key }}', '{{ $det }}', $event.target.value)">
+                                                        @endif
                                                     </div>
                                                     @endif
                                                 @endforeach
@@ -235,12 +258,42 @@
             {{-- Footer: botones (solo escritorio) --}}
             <div class="pos-cart-footer">
                 <div class="px-3 py-3 d-flex gap-2">
+                    @if(!$es_venta_por_cobrar)
                     <button wire:click="cancelarVenta"
                             class="btn btn-danger btn-lg px-3"
                             title="Cancelar venta"
                             {{ empty($carrito) ? 'disabled' : '' }}>
                         <i class="fa-solid fa-ban"></i>
                     </button>
+                    @endif
+                    @if($hayItemsNuevos)
+                    <button wire:click="marcarPorCobrar"
+                            wire:loading.attr="disabled"
+                            wire:target="marcarPorCobrar"
+                            class="btn btn-warning btn-lg px-3"
+                            title="Imprimir comanda y dejar Por Cobrar"
+                            {{ empty($carrito) ? 'disabled' : '' }}>
+                        <i class="fa-solid fa-kitchen-set"></i>
+                        <span class="d-none d-xl-inline ms-1">Comanda</span>
+                    </button>
+                    @elseif($es_venta_por_cobrar)
+                    <button wire:click="descartarEdicionPorCobrar"
+                            class="btn btn-outline-secondary btn-lg px-3"
+                            title="Cerrar e iniciar nueva venta">
+                        <i class="fa-solid fa-plus"></i>
+                        <span class="d-none d-xl-inline ms-1">Nueva</span>
+                    </button>
+                    @else
+                    <button wire:click="marcarPorCobrar"
+                            wire:loading.attr="disabled"
+                            wire:target="marcarPorCobrar"
+                            class="btn btn-warning btn-lg px-3"
+                            title="Imprimir comanda y dejar Por Cobrar"
+                            {{ empty($carrito) ? 'disabled' : '' }}>
+                        <i class="fa-solid fa-kitchen-set"></i>
+                        <span class="d-none d-xl-inline ms-1">Comanda</span>
+                    </button>
+                    @endif
                     <button @click="$dispatch('abrir-cobro', { total: {{ $total }} })"
                             wire:loading.attr="disabled"
                             wire:target="procesarVenta"
@@ -256,12 +309,39 @@
 
     {{-- ══ BOTTOM BAR (solo móvil) ══ --}}
     <div class="pos-bottom-bar d-lg-none">
+        @if(!$es_venta_por_cobrar)
         <button wire:click="cancelarVenta"
                 class="pos-act pos-act--danger"
                 {{ empty($carrito) ? 'disabled' : '' }}>
             <i class="fa-solid fa-ban"></i>
             <span>Cancelar</span>
         </button>
+        @endif
+        @if($hayItemsNuevos)
+        <button wire:click="marcarPorCobrar"
+                wire:loading.attr="disabled"
+                wire:target="marcarPorCobrar"
+                class="pos-act pos-act--comanda"
+                {{ empty($carrito) ? 'disabled' : '' }}>
+            <i class="fa-solid fa-kitchen-set"></i>
+            <span>Comanda</span>
+        </button>
+        @elseif($es_venta_por_cobrar)
+        <button wire:click="descartarEdicionPorCobrar"
+                class="pos-act">
+            <i class="fa-solid fa-plus"></i>
+            <span>Nueva venta</span>
+        </button>
+        @else
+        <button wire:click="marcarPorCobrar"
+                wire:loading.attr="disabled"
+                wire:target="marcarPorCobrar"
+                class="pos-act pos-act--comanda"
+                {{ empty($carrito) ? 'disabled' : '' }}>
+            <i class="fa-solid fa-kitchen-set"></i>
+            <span>Comanda</span>
+        </button>
+        @endif
         <button wire:click="toggleCarrito" class="pos-act pos-act--cart">
             <i class="fa-solid fa-{{ $mostrar_carrito ? 'utensils' : 'cart-shopping' }}"></i>
             <span>{{ $mostrar_carrito ? 'Menú' : 'Carrito' }}</span>
@@ -338,6 +418,140 @@
                 <button wire:click="cancelarInicioCaja" class="pos-selector__cancel">Cancelar</button>
             </div>
         </div>
+    @endif
+
+    {{-- ══ OVERLAY POR COBRAR ══ --}}
+    @if($mostrar_por_cobrar_overlay)
+    <div class="pos-porcobrar-overlay" wire:click="cerrarVentasPorCobrar">
+        <div class="pos-porcobrar-panel" wire:click.stop
+             x-data="{ slide: 0 }">
+
+            {{-- Header --}}
+            <div class="pos-porcobrar-header">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="pos-porcobrar-title">
+                        <i class="fa-solid fa-clock-rotate-left me-1 text-warning"></i>Por Cobrar
+                    </span>
+                    @if($ventasPorCobrar->count() > 0)
+                        <span class="pcc-counter" x-text="`${slide + 1} / {{ $ventasPorCobrar->count() }}`"></span>
+                    @endif
+                </div>
+                <button class="pcc-close-btn" wire:click="cerrarVentasPorCobrar">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            @if($ventasPorCobrar->isEmpty())
+                <div class="text-center text-muted py-5">
+                    <i class="fa-solid fa-clock-rotate-left fa-3x d-block mb-3 opacity-25"></i>
+                    <p class="mb-0">No hay ventas pendientes de cobro</p>
+                </div>
+            @else
+                {{-- Contenedor carrusel: flechas laterales + slides --}}
+                <div class="pcc-carousel">
+
+                {{-- Flecha izquierda --}}
+                <button class="pcc-arrow pcc-arrow--left" @click="slide = Math.max(0, slide - 1)"
+                        :class="{ 'pcc-arrow--hidden': slide === 0 }">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+
+                {{-- Slides --}}
+                <div class="pcc-slides-wrap">
+                {{-- Slides: uno por venta, visible con x-show --}}
+                @foreach($ventasPorCobrar as $vIdx => $vpc)
+                    @php
+                        $platosVpc    = $vpc->ventaItems->filter(fn($i) => is_array($i->detalle))->sum('cantidad');
+                        $refrescosVpc = $vpc->ventaItems->filter(fn($i) => !is_array($i->detalle) && $i->producto?->tipo === 'Refrescos')->sum('cantidad');
+                        $porcionesVpc = $vpc->ventaItems->filter(fn($i) => !is_array($i->detalle) && $i->producto?->tipo === 'Porciones')->sum('cantidad');
+                    @endphp
+                    <div x-show="slide === {{ $vIdx }}" x-cloak class="pcc-slide">
+
+                        {{-- Metadatos de la venta --}}
+                        <div class="pcc-venta-meta">
+                            <span class="pcc-num">#{{ $vpc->numero_venta ?? $vpc->id }}</span>
+                            <span class="pcc-hora">{{ $vpc->fecha_hora?->format('H:i') }}</span>
+                            <div class="d-flex gap-1 flex-wrap">
+                                @if($platosVpc > 0)
+                                    <span class="badge" style="background:#7c4b2a;font-size:.7rem"><i class="fa-solid fa-utensils me-1"></i>{{ $platosVpc }}</span>
+                                @endif
+                                @if($refrescosVpc > 0)
+                                    <span class="badge bg-info text-white" style="font-size:.7rem"><i class="fa-solid fa-glass-water me-1"></i>{{ $refrescosVpc }}</span>
+                                @endif
+                                @if($porcionesVpc > 0)
+                                    <span class="badge bg-success" style="font-size:.7rem"><i class="fa-solid fa-bowl-food me-1"></i>{{ $porcionesVpc }}</span>
+                                @endif
+                            </div>
+                            <span class="ms-auto fw-bold text-success" style="font-size:.95rem">Bs. {{ number_format($vpc->total, 2) }}</span>
+                        </div>
+
+                        {{-- Grid de imágenes --}}
+                        <div class="pcc-items-row">
+                            @foreach($vpc->ventaItems as $itm)
+                                <div class="pcc-item-card">
+                                    @if($itm->producto?->imagen)
+                                        <img src="{{ asset('storage/' . $itm->producto->imagen) }}"
+                                             class="pcc-item-card__img"
+                                             alt="{{ $itm->producto->nombre }}">
+                                    @else
+                                        <div class="pcc-item-card__ph">
+                                            @php $tIcon = match($itm->producto?->tipo) { 'Refrescos' => 'fa-glass-water', 'Porciones' => 'fa-bowl-food', default => 'fa-utensils' }; @endphp
+                                            <i class="fa-solid {{ $tIcon }} fa-2x opacity-40"></i>
+                                        </div>
+                                    @endif
+                                    <span class="pcc-item-card__qty">{{ $itm->cantidad }}×</span>
+                                    <div class="pcc-item-card__name">{{ $itm->producto?->nombre ?? '—' }}</div>
+                                </div>
+                            @endforeach
+                        </div>
+
+                    </div>{{-- /pcc-slide --}}
+                @endforeach
+
+                </div>{{-- /pcc-slides-wrap --}}
+
+                {{-- Flecha derecha --}}
+                <button class="pcc-arrow pcc-arrow--right" @click="slide = Math.min({{ max(0, $ventasPorCobrar->count() - 1) }}, slide + 1)"
+                        :class="{ 'pcc-arrow--hidden': slide === {{ max(0, $ventasPorCobrar->count() - 1) }} }">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+
+                </div>{{-- /pcc-carousel --}}
+
+                {{-- Footer fijo: dos botones --}}
+                <div class="pcc-footer">
+                    @foreach($ventasPorCobrar as $vIdx => $vpc)
+                        <div x-show="slide === {{ $vIdx }}" x-cloak class="pcc-footer__row">
+                            <button wire:click="cargarVentaPorCobrar({{ $vpc->id }})"
+                                    wire:loading.attr="disabled"
+                                    wire:target="cargarVentaPorCobrar({{ $vpc->id }})"
+                                    class="pos-porcobrar-btn pos-porcobrar-btn--edit">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                                <span>Editar</span>
+                            </button>
+                            <button wire:click="cobrarVentaPorCobrar({{ $vpc->id }})"
+                                    wire:loading.attr="disabled"
+                                    wire:target="cobrarVentaPorCobrar({{ $vpc->id }})"
+                                    class="pos-porcobrar-btn pos-porcobrar-btn--cobrar">
+                                <i class="fa-solid fa-cash-register"></i>
+                                <span>Cobrar</span>
+                            </button>
+                        </div>
+                    @endforeach
+                </div>
+
+                {{-- Dots --}}
+                @if($ventasPorCobrar->count() > 1)
+                    <div class="pcc-dots">
+                        @foreach($ventasPorCobrar as $di => $dvpc)
+                            <button class="pcc-dot" :class="{ 'pcc-dot--active': slide === {{ $di }} }" @click="slide = {{ $di }}"></button>
+                        @endforeach
+                    </div>
+                @endif
+            @endif
+
+        </div>
+    </div>
     @endif
 
     {{-- ══ OVERLAY COBRO ══ --}}
@@ -967,6 +1181,7 @@
         .pos-cobro-camara__btn--primary  { background: #0d6efd; color: #fff; }
         .pos-cobro-camara__btn--secondary { background: #e9ecef; color: #343a40; }
         .pos-cobro-camara__btn--success   { background: #25d366; color: #fff; }
+        .pos-cobro-desglose {
             margin: .5rem 0 .75rem;
             width: 100%;
             max-width: 240px;
@@ -1015,6 +1230,227 @@
             font-size: 1.05rem;
             font-weight: 600;
             letter-spacing: .03em;
+        }
+
+        /* ── Por Cobrar overlay / carrusel ──────────────────────────────────── */
+        .pos-porcobrar-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1900;
+            background: rgba(0,0,0,.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: .75rem;
+        }
+        .pos-porcobrar-panel {
+            background: #1a1a2e;
+            border-radius: 1.25rem;
+            width: 100%;
+            max-width: 680px;
+            box-shadow: 0 24px 80px rgba(0,0,0,.6);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .pos-porcobrar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem .75rem;
+            border-bottom: 1px solid #334155;
+            flex-shrink: 0;
+        }
+        .pos-porcobrar-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+        .pcc-close-btn {
+            background: rgba(255,255,255,.1);
+            border: 1px solid rgba(255,255,255,.18);
+            color: #e2e8f0;
+            width: 2rem;
+            height: 2rem;
+            border-radius: .4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background .15s, color .15s;
+            font-size: .85rem;
+            flex-shrink: 0;
+        }
+        .pcc-close-btn:hover { background: rgba(239,68,68,.75); color: #fff; border-color: transparent; }
+        /* Carrusel */
+        .pcc-counter {
+            font-size: .78rem;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+        .opacity-60 { opacity: .6; }
+        .pcc-slide {
+            padding: .85rem 1.1rem .5rem;
+            display: flex;
+            flex-direction: column;
+            gap: .75rem;
+            min-height: 320px;
+        }
+        .pcc-venta-meta {
+            display: flex;
+            align-items: center;
+            gap: .45rem;
+            flex-wrap: wrap;
+        }
+        .pcc-num  { font-weight: 700; color: #fbbf24; font-size: .95rem; }
+        .pcc-hora { color: #64748b; font-size: .78rem; }
+        /* Fila horizontal de imágenes — grid 4 columnas */
+        .pcc-items-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: .55rem;
+        }
+        .pcc-item-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            background: #16213e;
+            border: 1px solid #334155;
+            border-radius: .65rem;
+            overflow: hidden;
+            padding-bottom: .4rem;
+        }
+        .pcc-item-card__img {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            display: block;
+        }
+        .pcc-item-card__ph {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0f172a;
+            color: #64748b;
+        }
+        .pcc-item-card__qty {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(0,0,0,.72);
+            color: #fbbf24;
+            font-size: .72rem;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: .35rem;
+            line-height: 1.6;
+        }
+        .pcc-item-card__name {
+            font-size: .66rem;
+            color: #94a3b8;
+            text-align: center;
+            padding: .25rem .3rem 0;
+            line-height: 1.25;
+            width: 100%;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+        /* Carrusel: flechas del alto del contenido */
+        .pcc-carousel {
+            display: flex;
+            align-items: stretch;
+            flex: 1;
+            min-height: 0;
+        }
+        .pcc-slides-wrap {
+            flex: 1;
+            min-width: 0;
+        }
+        .pcc-arrow {
+            flex-shrink: 0;
+            width: 2.4rem;
+            border: none;
+            background: rgba(37,99,235,.12);
+            color: rgba(255,255,255,.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background .15s, color .15s, opacity .2s;
+            font-size: 1rem;
+        }
+        .pcc-arrow--left  { border-radius: 0; }
+        .pcc-arrow--right { border-radius: 0; }
+        .pcc-arrow:hover  { background: rgba(37,99,235,.45); color: #fff; }
+        .pcc-arrow--hidden { opacity: 0; pointer-events: none; }
+        /* Footer fijo de botones */
+        .pcc-footer {
+            border-top: 1px solid #334155;
+            padding: .75rem 1rem;
+            flex-shrink: 0;
+        }
+        .pcc-footer__row {
+            display: flex;
+            gap: .6rem;
+        }
+        /* Dots */
+        .pcc-dots {
+            display: flex;
+            justify-content: center;
+            gap: .4rem;
+            padding: .4rem 0 .8rem;
+        }
+        .pcc-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #334155;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            transition: background .2s, transform .2s;
+        }
+        .pcc-dot--active { background: #fbbf24; transform: scale(1.35); }
+        /* Botones de acción */
+        .pos-porcobrar-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .35rem;
+            padding: .5rem .75rem;
+            border-radius: .55rem;
+            font-size: .78rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: filter .15s, transform .1s;
+        }
+        .pos-porcobrar-btn:active { transform: scale(.95); }
+        .pos-porcobrar-btn:not(:disabled):hover { filter: brightness(.85); }
+        .pos-porcobrar-btn:disabled { opacity: .5; cursor: not-allowed; }
+        .pos-porcobrar-btn--edit   { background: #374151; color: #e2e8f0; flex: 1; }
+        .pos-porcobrar-btn--cobrar  { background: #16a34a; color: #fff; flex: 2; }
+        .pos-porcobrar-btn--cancel  { background: #374151; color: #f87171; }
+
+        /* ── Bottom bar móvil: botón comanda ── */
+        .pos-act--comanda {
+            color: #fbbf24;
+        }
+        .pos-act--comanda:disabled {
+            color: #4b5563;
+        }
+        /* ── Bottom bar móvil: botón Por Cobrar ── */
+        .pos-act--porcobrar {
+            color: #94a3b8;
+        }
+        .pos-act--porcobrar--active {
+            color: #fbbf24;
         }
     </style>
 

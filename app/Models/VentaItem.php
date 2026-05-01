@@ -12,13 +12,15 @@ class VentaItem extends Model
         'cantidad',
         'precio',
         'subtotal',
-        'detalle'
+        'detalle',
+        'comanda_impresa',
     ];
 
     protected $casts = [
-        'precio' => 'decimal:2',
-        'subtotal' => 'decimal:2',
-        'detalle' => 'array'
+        'precio'          => 'decimal:2',
+        'subtotal'        => 'decimal:2',
+        'detalle'         => 'array',
+        'comanda_impresa' => 'boolean',
     ];
 
     public function venta()

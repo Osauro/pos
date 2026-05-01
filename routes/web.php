@@ -67,6 +67,25 @@ Route::get('/download/printpos', function () {
     ]);
 })->name('download.printpos')->middleware('auth');
 
+// -- Endpoint de sincronización de archivos (token requerido) ------------------
+Route::get('/sync/file', function (\Illuminate\Http\Request $request) {
+    $token = env('SYNC_TOKEN');
+    abort_if(empty($token), 403, 'Sync no configurado.');
+    abort_unless(
+        hash_equals($token, (string) $request->query('token', '')),
+        403,
+        'Token inválido.'
+    );
+    $file = $request->query('file', '');
+    // Prevenir path traversal
+    $file = ltrim(str_replace(['..', '\\'], '', $file), '/');
+    abort_if(empty($file), 400);
+    $disk = \Illuminate\Support\Facades\Storage::disk('public');
+    abort_unless($disk->exists($file), 404);
+    return response($disk->get($file), 200)
+        ->header('Content-Type', $disk->mimeType($file) ?: 'application/octet-stream');
+})->name('sync.file');
+
 // -- Rutas públicas ------------------------------------------------------------
 Route::get('/', function () {
     if (auth()->check()) {
